@@ -1,400 +1,181 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Görev Takibi (localStorage + Cloud)</title>
-  <meta name="theme-color" content="#0f172a" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" href="icons/icon-192.png" />
-  <style>
-    :root{
-      --bg:#0b1220; --card:#0f172a; --muted:#94a3b8; --txt:#e5e7eb;
-      --accent:#22c55e; --accent2:#60a5fa; --danger:#ef4444; --line:#334155;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
-    .wrap{max-width:1200px;margin:28px auto;padding:0 16px}
-    h1{margin:0 0 18px;font-size:26px}
-    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
-    .row{display:flex;gap:10px;align-items:center;margin:10px 0}
-    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
-    input,select{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--txt);padding:10px 12px;border-radius:12px;outline:none}
-    input::placeholder{color:#6b7280}
-    .btn{border:0;border-radius:12px;padding:12px 16px;color:#fff;cursor:pointer}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .btn-green{background:var(--accent)}
-    .btn-blue{background:var(--accent2)}
-    .btn-ghost{background:#0b1220;border:1px solid var(--line);color:var(--txt)}
-    .btn-danger{background:var(--danger)}
-    .label-chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid var(--line);font-size:12px;color:#cbd5e1}
-    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px}
-    th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:center}
-    th{text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:#a3b1c7}
-    tbody tr:hover{background:#0b1220}
-    .section-title{margin:4px 0 10px;font-size:14px;color:#cbd5e1}
-    .muted{color:#94a3b8}
-    .hr{height:1px;background:var(--line);margin:14px 0}
-    /* Mobil */
-    @media (max-width: 900px){
-      .grid{grid-template-columns:1fr}
-      .wrap{padding:12px}
-      .card{padding:14px}
-      .btn{padding:12px 14px}
-      table{font-size:13px}
-    }
-    /* Toast */
-    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0b1220;border:1px solid var(--line);color:#e5e7eb;padding:8px 12px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);z-index:9999}
-    .toast.ok{border-color:#16a34a}
-    .toast.err{border-color:#ef4444}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Görev Takibi</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f1624;
+  color: #fff;
+  margin: 0; padding: 0;
+  display: flex; justify-content: center; align-items: flex-start;
+  min-height: 100vh;
+}
+.card {
+  background: #161d2e;
+  border-radius: 16px;
+  padding: 1rem 1.5rem;
+  margin: 1rem;
+  box-shadow: 0 0 10px #0004;
+}
+button {
+  border: none; border-radius: 8px;
+  padding: .5rem 1rem;
+  cursor: pointer; font-weight: 500;
+}
+#toast {
+  position: fixed; bottom: 1rem; right: 1rem;
+  background: #222c; color: #fff;
+  padding: .5rem 1rem; border-radius: 6px;
+  opacity: 0; transition: opacity .4s;
+}
+#toast.show { opacity: 1; }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Görev Takibi <span class="muted">(localStorage + Cloud)</span></h1>
 
-    <div class="grid">
-      <!-- Sol: Yeni Kayıt -->
-      <div class="card">
-        <div class="section-title">Yeni Kayıt</div>
+<div class="card" style="width:260px;">
+  <h2>Yeni Kayıt</h2>
+  <label>Görev Türü</label><br>
+  <input id="taskType" list="typeList" placeholder="Tür seç"><br>
+  <datalist id="typeList"></datalist>
+  <br>
+  <label>Kişi</label><br>
+  <input id="person" list="personList" placeholder="Personel"><br>
+  <datalist id="personList"></datalist>
+  <br>
+  <button onclick="addRecord()">Kaydı Ekle</button>
+  <hr>
+  <button onclick="exportJSON()">Dışa Aktar (JSON)</button>
+  <button onclick="importJSON()">İçe Aktar</button>
+  <hr>
+  <button onclick="resetAll()" style="background:#c33;color:#fff">Tüm Veriyi Sıfırla</button>
+</div>
 
-        <div class="row">
-          <div style="flex:1">
-            <label>Görev Türü</label>
-            <select id="taskType"></select>
-          </div>
-          <div style="flex:1">
-            <label>Kişi</label>
-            <select id="personSelect"></select>
-          </div>
-        </div>
+<div class="card" style="flex:1;">
+  <h2>Özet Tablo</h2>
+  <div id="records"></div>
+</div>
 
-        <div class="row">
-          <div style="flex:1">
-            <label>Başlangıç Tarihi</label>
-            <input id="startDate" type="date" placeholder="gg.aa.yyyy" />
-          </div>
-          <div style="flex:1">
-            <label>Bitiş Tarihi (opsiyonel)</label>
-            <input id="endDate" type="date" placeholder="gg.aa.yyyy" />
-          </div>
-        </div>
+<button id="installBtn" style="position:fixed;bottom:1rem;left:1rem;background:#4b9;color:#fff;border:none;padding:.6rem 1rem;border-radius:8px;display:none;">Telefonuma Yükle</button>
 
-        <div id="otherBox" style="display:none">
-          <div class="row">
-            <div style="flex:1">
-              <label>Diğer Görev Puanı (1-5)</label>
-              <input id="pointsInput" type="number" min="1" max="5" value="3" />
-            </div>
-            <div style="flex:2">
-              <label>Açıklama</label>
-              <input id="noteInput" type="text" placeholder="Görev açıklaması" />
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <button class="btn btn-green" id="btnSuggest">Sıradaki Öner</button>
-          <button class="btn btn-blue" id="btnAdd">Kaydı Ekle</button>
-        </div>
-
-        <details style="margin-top:8px">
-          <summary class="label-chip">Personel ve Tür Listeleri</summary>
-          <div class="hr"></div>
-          <div class="row">
-            <input id="newPerson" placeholder="Yeni personel adı" />
-            <button class="btn btn-ghost" id="btnAddPerson">Ekle</button>
-          </div>
-          <div id="peopleList" class="muted" style="font-size:13px"></div>
-
-          <div class="hr"></div>
-          <div class="row">
-            <input id="newType" placeholder="Yeni tür (ör. GAMER)" />
-            <button class="btn btn-ghost" id="btnAddType">Ekle</button>
-          </div>
-          <div id="typeList" class="muted" style="font-size:13px"></div>
-        </details>
-
-        <details style="margin-top:8px" open>
-          <summary class="label-chip">Bulut Eşitleme (aktif)</summary>
-          <div class="hr"></div>
-          <div class="muted" style="font-size:13px">
-            Cloud URL bu sayfaya gömülü. Kayıt ekleme/silme anında otomatik senkron olur.
-          </div>
-          <div class="row">
-            <button class="btn btn-ghost" id="btnCloudPull">Buluttan Çek</button>
-            <button class="btn btn-ghost" id="btnCloudPush">Buluta Gönder</button>
-          </div>
-        </details>
-
-        <div class="row">
-          <button class="btn btn-ghost" id="btnExport">Dışa Aktar (JSON)</button>
-          <button class="btn btn-ghost" id="btnImport">İçe Aktar</button>
-          <button class="btn btn-danger" id="btnReset">Tüm Veriyi Sıfırla</button>
-        </div>
-      </div>
-
-      <!-- Sağ: Özet Tablo + Kayıtlar -->
-      <div class="card">
-        <div class="section-title">Özet Tablo</div>
-        <div id="summary"></div>
-
-        <div class="hr"></div>
-        <div class="section-title">Kayıtlar</div>
-        <div id="log"></div>
-      </div>
-    </div>
-  </div>
+<div id="toast"></div>
 
 <script>
-/* =======================
-   Basit veri modeli
-======================= */
-const LS_KEY = 'gorevTakip_v1';
-const OTHER_TYPE = 'DIGER';
-
-// 🌩️ Cloud API URL'in SABİT (senin Apps Script URL'in)
+/* ====== Uygulama verisi ====== */
+let state = { people: [], types: [], records: [] };
 const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyTlgwK6b1P4w2m1u2yTTTJNz63w8MJ2RTBPTeQeOcQrmptZtVN8_u_doR1WTSXJPSd/exec";
 
-let state = {
-  people: ['ATAL','KAVAKLI','YAMAN','AKSU','GORMEZ','TURGAY','ERDIK'],
-  types:  ['112-HABER MERKEZI','GAMER','MAC','GOCMEN',OTHER_TYPE],
-  lastByType: {},
-  records: [] // {type, person, start, end, days, (points,note)}
-};
-
-const $ = sel => document.querySelector(sel);
-
-/* =======================
-   Yardımcılar
-======================= */
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+/* ====== Local Storage ====== */
+function save(){ localStorage.setItem('gorevData', JSON.stringify(state)); }
 function load(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(raw){ state = JSON.parse(raw); }
-  }catch{}
-}
-function toast(msg, ok=true){
-  const t = document.createElement('div');
-  t.className = 'toast ' + (ok?'ok':'err');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>t.remove(), 2000);
+  const s = localStorage.getItem('gorevData');
+  if(s) state = JSON.parse(s);
 }
 
-/* =======================
-   Cloud (Apps Script)
-======================= */
+/* ====== Arayüz ====== */
+function render(){
+  document.getElementById('personList').innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
+  document.getElementById('typeList').innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
+  document.getElementById('records').innerHTML =
+    state.records.length ?
+      `<ul>${state.records.map(r=>`<li>${r.type} → ${r.person}</li>`).join('')}</ul>` :
+      "<i>Henüz kayıt yok</i>";
+}
+
+/* ====== Kayıt işlemleri ====== */
+function addRecord(){
+  const t = document.getElementById('taskType').value.trim();
+  const p = document.getElementById('person').value.trim();
+  if(!t||!p) return toast("Lütfen tür ve kişi gir.");
+  if(!state.types.includes(t)) state.types.push(t);
+  if(!state.people.includes(p)) state.people.push(p);
+  state.records.push({type:t, person:p, date:Date.now()});
+  save(); render(); schedulePush("ekleme");
+}
+function resetAll(){
+  if(confirm("Tüm veriler silinsin mi?")){
+    state = {people:[], types:[], records:[]};
+    save(); render(); schedulePush("sıfırlama");
+  }
+}
+
+/* ====== Dışa/İçe aktar ====== */
+function exportJSON(){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,2)], {type:"application/json"}));
+  a.download = "gorevData.json"; a.click();
+}
+function importJSON(){
+  const i = document.createElement('input'); i.type="file"; i.accept=".json";
+  i.onchange = e=>{
+    const f = e.target.files[0]; if(!f) return;
+    f.text().then(t=>{
+      try{ state = JSON.parse(t); save(); render(); schedulePush("içe aktarım"); }
+      catch{ toast("Geçersiz JSON"); }
+    });
+  };
+  i.click();
+}
+
+/* ====== Bulut Senkron (Apps Script) ====== */
+async function cloudPush(){
+  const res = await fetch(CLOUD_API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({data:state})
+  });
+  const j = await res.json();
+  if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
+  return true;
+}
 async function cloudPull(){
   const res = await fetch(CLOUD_API_URL);
   const j = await res.json();
-  if(!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
-  // Veri varsa al, yoksa local kalır
-  if(j.data && (j.data.people||j.data.records||j.data.types)){
-    state = j.data;
-    save();
-    render();
-  }
-  return true;
-}
-async function cloudPush(){
-  const res = await fetch(CLOUD_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ← önemli
-    body: JSON.stringify({ data: state })
-  });
-  const j = await res.json();
-  if(!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
-  return true;
+  if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
+  if(j.data){ state=j.data; save(); render(); }
 }
 let pushDebounce=null;
 function schedulePush(reason=''){
   if(pushDebounce) clearTimeout(pushDebounce);
-  pushDebounce = setTimeout(async()=>{
-    try{ await cloudPush(); toast('Buluta eşitlendi'+(reason?' • '+reason:''), true); }
-    catch(e){ toast('Senkron hatası: '+(e.message||e), false); }
+  pushDebounce=setTimeout(async()=>{
+    try{ await cloudPush(); toast('Buluta eşitlendi'+(reason?' • '+reason:''),true); }
+    catch(e){ console.error(e); toast('Senkron hatası: '+e.message,false); }
     finally{ pushDebounce=null; }
-  }, 500);
+  },600);
 }
 
-/* =======================
-   Render
-======================= */
-function render(){
-  // Tür/Person listeleri
-  const selType = $('#taskType');
-  const selPerson = $('#personSelect');
-  selType.innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
-  selPerson.innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
-  $('#otherBox').style.display = (selType.value===OTHER_TYPE?'block':'none');
-
-  // Özet tablo (kişiye göre tür sayıları)
-  const counts = {};
-  state.people.forEach(p=>{
-    counts[p] = {};
-    state.types.forEach(t=>counts[p][t]=0);
-    counts[p].TOPLAM = 0;
-  });
-  for(const r of state.records){
-    if(counts[r.person]){
-      if(r.type===OTHER_TYPE){
-        counts[r.person][OTHER_TYPE] += (Number(r.points)||1);
-        counts[r.person].TOPLAM += (Number(r.points)||1);
-      }else{
-        counts[r.person][r.type] += r.days||1;
-        counts[r.person].TOPLAM += r.days||1;
-      }
-    }
-  }
-
-  const head = `<tr><th>PERSONEL</th>${state.types.map(t=>`<th>${t}</th>`).join('')}<th>TOPLAM</th></tr>`;
-  const rows = state.people.map(p=>{
-    const tds = state.types.map(t=>`<td>${counts[p][t]||0}</td>`).join('');
-    return `<tr><td class="label-chip" style="text-align:left">${p}</td>${tds}<td><b>${counts[p].TOPLAM||0}</b></td></tr>`;
-  }).join('');
-  $('#summary').innerHTML = `<table>${head}${rows}</table>`;
-
-  // Kayıtlar
-  const log = $('#log');
-  if(!state.records.length){ log.innerHTML = `<div class="muted">Henüz kayıt yok.</div>`; return; }
-  let html = `<table><thead><tr>
-      <th>BAŞLANGIÇ</th><th>BİTİŞ</th><th>TÜR</th><th>KİŞİ</th><th>GÜN</th><th>PUAN</th><th>AÇIKLAMA</th><th></th>
-    </tr></thead><tbody>`;
-  state.records.forEach((r,i)=>{
-    html += `<tr>
-      <td>${r.start}</td>
-      <td>${r.end}</td>
-      <td>${r.type}</td>
-      <td>${r.person}</td>
-      <td>${r.days||''}</td>
-      <td>${r.points||''}</td>
-      <td style="text-align:left">${r.note||''}</td>
-      <td><button class="btn btn-ghost" data-del="${i}">Sil</button></td>
-    </tr>`;
-  });
-  html += `</tbody></table>`;
-  log.innerHTML = html;
-
-  // Sil butonları
-  log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
-    const idx = +b.getAttribute('data-del');
-    state.records.splice(idx,1);
-    save(); render(); schedulePush('silme');
-  });
-
-  // Kişi / tür listeleri
-  $('#peopleList').innerHTML = state.people.map(p=>{
-    return `<span class="label-chip" style="margin:2px">${p}
-              <button class="btn btn-ghost" style="margin-left:6px;padding:2px 6px" data-delp="${p}">x</button>
-            </span>`;
-  }).join('');
-  $('#peopleList').querySelectorAll('button[data-delp]').forEach(b=>b.onclick=()=>{
-    const p = b.getAttribute('data-delp');
-    if(!confirm(`${p} silinsin mi?`)) return;
-    state.people = state.people.filter(x=>x!==p);
-    save(); render(); schedulePush('personel sil');
-  });
-
-  $('#typeList').innerHTML = state.types.map(t=>{
-    return `<span class="label-chip" style="margin:2px">${t}
-              <button class="btn btn-ghost" style="margin-left:6px;padding:2px 6px" data-delt="${t}">x</button>
-            </span>`;
-  }).join('');
-  $('#typeList').querySelectorAll('button[data-delt]').forEach(b=>b.onclick=()=>{
-    const t = b.getAttribute('data-delt');
-    if(state.types.length<=1) return alert('En az bir tür kalmalı.');
-    if(!confirm(`${t} silinsin mi?`)) return;
-    state.types = state.types.filter(x=>x!==t);
-    save(); render(); schedulePush('tür sil');
-  });
+/* ====== Yardımcılar ====== */
+function toast(msg, ok){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=ok?'#2b4':'#c33';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-/* =======================
-   Olaylar
-======================= */
-$('#taskType').addEventListener('change',()=>{
-  $('#otherBox').style.display = ($('#taskType').value===OTHER_TYPE ? 'block':'none');
-});
-
-$('#btnAdd').onclick=()=>{
-  const type = $('#taskType').value;
-  const person = $('#personSelect').value;
-  const s = $('#startDate').value;
-  const e = $('#endDate').value;
-  if(!type||!person||!s) return alert('Eksik bilgi');
-
-  let end = e;
-  if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
-  let days = Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1;
-
-  const rec = {type, person, start:s, end:end, days};
-  if(type===OTHER_TYPE){
-    rec.points = Math.max(1, Math.min(5, Number($('#pointsInput').value||'1')));
-    rec.note = ($('#noteInput').value||'').trim();
-  }
-
-  state.records.push(rec);
-  state.lastByType[type]=person;
-  save(); render();
-  if(type===OTHER_TYPE) $('#noteInput').value='';
-  schedulePush('ekleme');
-};
-
-$('#btnSuggest').onclick=()=>{
-  // En az görev yapan kişiyi öner (basit)
-  const type = $('#taskType').value;
-  const perCounts = {};
-  state.people.forEach(p=>perCounts[p]=0);
-  state.records.filter(r=>r.type===type).forEach(r=>perCounts[r.person]=(perCounts[r.person]||0)+ (r.days||1));
-  const sorted = Object.entries(perCounts).sort((a,b)=>a[1]-b[1]);
-  if(sorted.length) $('#personSelect').value = sorted[0][0];
-};
-
-$('#btnAddPerson').onclick=()=>{
-  const v = $('#newPerson').value.trim(); if(!v) return;
-  if(!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; save(); render(); schedulePush('personel'); }
-};
-$('#btnAddType').onclick=()=>{
-  const v = $('#newType').value.trim(); if(!v) return;
-  if(!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; save(); render(); schedulePush('tür'); }
-};
-
-$('#btnCloudPull').onclick=()=>cloudPull().then(()=>toast('Buluttan çekildi',true)).catch(e=>toast(e.message,false));
-$('#btnCloudPush').onclick=()=>cloudPush().then(()=>toast('Buluta gönderildi',true)).catch(e=>toast(e.message,false));
-
-$('#btnExport').onclick=()=>{
-  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-data.json'; a.click();
-};
-$('#btnImport').onclick=()=>{
-  const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json';
-  i.onchange=()=>{ const f=i.files[0]; const r=new FileReader(); r.onload=()=>{
-      try{ state=JSON.parse(r.result); save(); render(); schedulePush('içe aktar'); }
-      catch(e){ alert('Geçersiz dosya.'); }
-  }; r.readAsText(f); }; i.click();
-};
-$('#btnReset').onclick=()=>{ if(confirm('Tüm veriyi sıfırlamak istiyor musun?')){ localStorage.removeItem(LS_KEY); state.records=[]; save(); render(); schedulePush('sıfırlama'); } };
-
-/* =======================
-   Başlangıç
-======================= */
-load();
-render();
-// sayfa açılışında buluttan çek (varsa)
+/* ====== Başlat ====== */
+load(); render();
 (async()=>{ try{ await cloudPull(); toast('Buluttan çekildi',true);}catch(e){} })();
-</script>
 
-<script>
-// Service Worker (PWA) kaydı
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () =>
-    navigator.serviceWorker.register('./sw.js', { scope: './' })
-  );
+/* ====== PWA / Service Worker ====== */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
 }
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('installBtn').style.display='block';
+});
+document.getElementById('installBtn').onclick=async()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const {outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted') toast('Uygulama yüklendi',true);
+  deferredPrompt=null;
+};
 </script>
 </body>
 </html>
-
-
