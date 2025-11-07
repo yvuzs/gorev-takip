@@ -1,6 +1,6 @@
 <!-- sw.js (Service Worker) -->
 <script type="text/plain" id="__pwa_sw">
-const CACHE_NAME = 'gorev-takip-v2';
+const CACHE_NAME = 'gorev-takip-v3';
 const ASSETS = [
 './',
 './index.html', // kendi dosya adını yaz: gorev_takip.html gibi
@@ -26,3 +26,4 @@ return res;
 });
 
 </script>
+
