@@ -260,7 +260,68 @@
         const { outcome } = await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none';
       });
     })();
+    
   </script>
+
+<script>
+// 🌩️ Cloud API ayarları
+const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyTlgwK6b1P4w2m1u2yTTTJNz63w8MJ2RTBPTeQeOcQrmptZtVN8_u_doR1WTSXJPSd/exec";
+
+// Tarayıcıda cache’te veri varsa kullan, yoksa cloud’dan çek
+async function loadData() {
+    let localData = localStorage.getItem("gorevData");
+    if (localData) {
+        console.log("📦 Local veriler yüklendi");
+        renderTable(JSON.parse(localData));
+    } else {
+        console.log("☁️ Cloud’dan veri çekiliyor...");
+        try {
+            let res = await fetch(CLOUD_API_URL);
+            let json = await res.json();
+            if (json.ok && json.data) {
+                localStorage.setItem("gorevData", JSON.stringify(json.data));
+                renderTable(json.data);
+            }
+        } catch (err) {
+            console.error("Cloud veri çekme hatası:", err);
+        }
+    }
+}
+
+// Cloud’a veri gönder (ekleme/silme/güncelleme sonrası)
+async function syncToCloud(data) {
+    try {
+        await fetch(CLOUD_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data })
+        });
+        console.log("☁️ Cloud’a senkronize edildi");
+    } catch (err) {
+        console.error("Cloud senkronizasyon hatası:", err);
+    }
+}
+
+// Ekleme örneği (senin mevcut ekleme fonksiyonuna entegre edilir)
+function addRecord(item) {
+    let data = JSON.parse(localStorage.getItem("gorevData")) || { people: [], types: [], records: [], lastByType: {} };
+    data.records.push(item);
+    localStorage.setItem("gorevData", JSON.stringify(data));
+    syncToCloud(data); // ☁️ otomatik buluta gönder
+    renderTable(data);
+}
+
+// Tabloyu çizmek için örnek fonksiyon
+function renderTable(data) {
+    console.log("Tablo verisi:", data);
+    // senin tablo doldurma kodun buraya entegre edilir
+}
+
+// Sayfa yüklendiğinde otomatik başlat
+document.addEventListener("DOMContentLoaded", loadData);
+</script>
+
+  
 </body>
 </html>
 
@@ -325,3 +386,4 @@ self.addEventListener('fetch', e=>{
 4) Telefon tarayıcısından siteyi ziyaret edin, ekranda çıkan “Telefonuma Yükle” düğmesi veya tarayıcı menüsündeki “Ana ekrana ekle” ile kurulumu yapın.
 5) iOS: Safari’de paylaş menüsü → Ana Ekrana Ekle.
 -->
+
