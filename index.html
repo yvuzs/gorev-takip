@@ -200,9 +200,9 @@ async function cloudPull(){
   return true;
 }
 async function cloudPush(){
-  const res = await fetch(CLOUD_API_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+  const res = await fetch(CLOUD_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ← önemli
     body: JSON.stringify({ data: state })
   });
   const j = await res.json();
@@ -394,3 +394,4 @@ if('serviceWorker' in navigator){
 </script>
 </body>
 </html>
+
