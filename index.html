@@ -1,389 +1,396 @@
 <!doctype html>
 <html lang="tr">
 <head>
-<meta charset="utf-8" />
-<link rel="manifest" href="manifest.webmanifest" />
-<meta name="theme-color" content="#0f172a" />
-<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Görev Takibi (Veritabanısız)</title>
-<style>
-  :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:#e5e7eb}
-  .wrap{max-width:1200px;margin:auto;padding:24px}
-  h1{margin:0 0 10px;font-weight:800;font-size:22px;text-align:center}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
-  .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  label{display:block;margin:10px 0 6px;color:#cbd5e1;font-weight:600}
-  input[type=text],input[type=date],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
-  textarea{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
-  .row{display:flex;gap:8px;align-items:center}
-  .row>*{flex:1}
-  .btn{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
-  .btn.small{padding:4px 8px;font-size:12px;border-radius:8px}
-  .btn:hover{filter:brightness(1.15)}
-  .btn-prim{background:linear-gradient(135deg,var(--accent2),#06b6d4);border:0;color:white}
-  .btn-good{background:linear-gradient(135deg,var(--accent),#16a34a);border:0;color:white}
-  .btn-danger{background:linear-gradient(135deg,#ef4444,#f97316);border:0;color:white}
-  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;background:var(--chip);border:1px solid #334155}
-  .muted{color:var(--muted)}
-  table{width:100%;border-collapse:collapse;text-align:center}
-  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:center;vertical-align:middle}
-  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
-  tbody tr:hover{background:#0b1220}
-  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block;text-align:center}
-  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block;text-align:center}
-  .stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-  .vgap{height:8px}
-  .small{font-size:12px}
-  .right{display:flex;gap:8px;justify-content:flex-end}
-  details{border:1px dashed #334155;border-radius:12px;padding:10px}
-  summary{cursor:pointer;color:#93c5fd}
-  /* --- Score picker (1–5) --- */
-  .score-picker{display:flex;gap:6px;justify-content:center;margin-top:6px}
-  .score-box{width:40px;height:24px;border-radius:6px;border:1px solid #444;cursor:pointer;opacity:.85;transition:transform .12s, opacity .12s, box-shadow .12s}
-  .score-box:hover{opacity:1;transform:translateY(-1px)}
-  .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
-  .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
-  /* --- Responsive (mobile) --- */
-  @media (max-width: 900px){
-    .grid{grid-template-columns:1fr}
-    .wrap{padding:16px}
-    .card{padding:14px}
-    h1{font-size:20px}
-    .btn{padding:12px 14px}
-    table{font-size:13px}
-  }
-  /* --- Responsive (mobile) --- */
-  @media (max-width: 900px){
-    .grid{grid-template-columns:1fr}
-    .wrap{padding:16px}
-    .card{padding:14px}
-    h1{font-size:20px}
-    .btn{padding:12px 14px}
-    table{font-size:13px}
-  }
-  /* Toast */
-  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0b1220;border:1px solid #334155;color:#e5e7eb;padding:8px 12px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);z-index:9999;opacity:.98}
-  .toast.ok{border-color:#16a34a}
-  .toast.err{border-color:#ef4444}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Görev Takibi (localStorage + Cloud)</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <style>
+    :root{
+      --bg:#0b1220; --card:#0f172a; --muted:#94a3b8; --txt:#e5e7eb;
+      --accent:#22c55e; --accent2:#60a5fa; --danger:#ef4444; --line:#334155;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+    .wrap{max-width:1200px;margin:28px auto;padding:0 16px}
+    h1{margin:0 0 18px;font-size:26px}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+    .row{display:flex;gap:10px;align-items:center;margin:10px 0}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    input,select{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--txt);padding:10px 12px;border-radius:12px;outline:none}
+    input::placeholder{color:#6b7280}
+    .btn{border:0;border-radius:12px;padding:12px 16px;color:#fff;cursor:pointer}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-green{background:var(--accent)}
+    .btn-blue{background:var(--accent2)}
+    .btn-ghost{background:#0b1220;border:1px solid var(--line);color:var(--txt)}
+    .btn-danger{background:var(--danger)}
+    .label-chip{display:inline-block;padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid var(--line);font-size:12px;color:#cbd5e1}
+    table{width:100%;border-collapse:separate;border-spacing:0;margin-top:8px}
+    th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:center}
+    th{text-transform:uppercase;letter-spacing:.06em;font-size:12px;color:#a3b1c7}
+    tbody tr:hover{background:#0b1220}
+    .section-title{margin:4px 0 10px;font-size:14px;color:#cbd5e1}
+    .muted{color:#94a3b8}
+    .hr{height:1px;background:var(--line);margin:14px 0}
+    /* Mobil */
+    @media (max-width: 900px){
+      .grid{grid-template-columns:1fr}
+      .wrap{padding:12px}
+      .card{padding:14px}
+      .btn{padding:12px 14px}
+      table{font-size:13px}
+    }
+    /* Toast */
+    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0b1220;border:1px solid var(--line);color:#e5e7eb;padding:8px 12px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);z-index:9999}
+    .toast.ok{border-color:#16a34a}
+    .toast.err{border-color:#ef4444}
+  </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted">(localStorage ile)</span></h1>
+    <h1>Görev Takibi <span class="muted">(localStorage + Cloud)</span></h1>
+
     <div class="grid">
+      <!-- Sol: Yeni Kayıt -->
       <div class="card">
-        <h2>Yeni Kayıt</h2>
+        <div class="section-title">Yeni Kayıt</div>
+
         <div class="row">
-          <div>
+          <div style="flex:1">
             <label>Görev Türü</label>
             <select id="taskType"></select>
           </div>
-          <div>
-            <label>Kişi <span class="muted small" id="suggestHint"></span></label>
+          <div style="flex:1">
+            <label>Kişi</label>
             <select id="personSelect"></select>
           </div>
         </div>
+
         <div class="row">
-          <div>
+          <div style="flex:1">
             <label>Başlangıç Tarihi</label>
-            <input id="startDate" type="date" />
+            <input id="startDate" type="date" placeholder="gg.aa.yyyy" />
           </div>
-          <div>
+          <div style="flex:1">
             <label>Bitiş Tarihi (opsiyonel)</label>
-            <input id="endDate" type="date" />
+            <input id="endDate" type="date" placeholder="gg.aa.yyyy" />
           </div>
         </div>
-        <div id="otherWrap" style="display:none">
-          <label>Diğer Görev Puanı (1–5) & Açıklama</label>
-          <div class="score-picker" id="scorePicker">
-            <div class="score-box" data-val="1" style="background:#fff7b2"></div>
-            <div class="score-box" data-val="2" style="background:#ffe44d"></div>
-            <div class="score-box" data-val="3" style="background:#ffd32d"></div>
-            <div class="score-box" data-val="4" style="background:#ffa64d"></div>
-            <div class="score-box" data-val="5" style="background:#e82929"></div>
-          </div>
-          <span class="score-label" id="scoreLabel">Seçili: 1</span>
-          <input id="pointsInput" type="hidden" value="1" />
-          <div class="row" style="margin-top:8px">
-            <input id="noteInput" type="text" placeholder="Açıklama (ör. eğitim desteği, evrak dağıtımı...)" />
-          </div>
-        </div>
-        <label>Atama Stratejisi</label>
-        <div class="stack small" id="modeRadios">
-          <label class="chip"><input type="radio" name="mode" value="rr"> Round-Robin</label>
-          <label class="chip"><input type="radio" name="mode" value="min" checked> En az görev yapan</label>
-          <label class="chip"><input type="radio" name="mode" value="idle"> En uzun süredir görev almayan</label>
-        </div>
-        <div class="row">
-          <button class="btn btn-good" id="btnSuggest">Sıradaki Öner</button>
-          <button class="btn btn-prim" id="btnAdd">Kaydı Ekle</button>
-        </div>
-        <details>
-          <summary>Personel ve Tür Listeleri</summary>
-          <div class="row"><input id="newPerson" type="text" placeholder="Yeni personel adı" /><button class="btn" id="btnAddPerson">Ekle</button></div>
-          <div class="stack" id="peopleChips"></div>
-          <label>Görev Türleri</label>
-          <div class="stack" id="typeChips"></div>
-          <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="btnAddType">Ekle</button></div>
-        </details>
 
-        <details>
-          <summary>Bulut Eşitleme (opsiyonel)</summary>
-          <label>Bulut API URL (Google Apps Script Web App)</label>
-          <input id="cloudUrl" type="text" placeholder="https://script.google.com/.../exec" />
+        <div id="otherBox" style="display:none">
           <div class="row">
-            <input id="cloudToken" type="text" placeholder="Gizli anahtar (opsiyonel)" />
-            <button class="btn" id="btnCloudPull">Buluttan Çek</button>
-            <button class="btn" id="btnCloudPush">Buluta Gönder</button>
+            <div style="flex:1">
+              <label>Diğer Görev Puanı (1-5)</label>
+              <input id="pointsInput" type="number" min="1" max="5" value="3" />
+            </div>
+            <div style="flex:2">
+              <label>Açıklama</label>
+              <input id="noteInput" type="text" placeholder="Görev açıklaması" />
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn btn-green" id="btnSuggest">Sıradaki Öner</button>
+          <button class="btn btn-blue" id="btnAdd">Kaydı Ekle</button>
+        </div>
+
+        <details style="margin-top:8px">
+          <summary class="label-chip">Personel ve Tür Listeleri</summary>
+          <div class="hr"></div>
+          <div class="row">
+            <input id="newPerson" placeholder="Yeni personel adı" />
+            <button class="btn btn-ghost" id="btnAddPerson">Ekle</button>
+          </div>
+          <div id="peopleList" class="muted" style="font-size:13px"></div>
+
+          <div class="hr"></div>
+          <div class="row">
+            <input id="newType" placeholder="Yeni tür (ör. GAMER)" />
+            <button class="btn btn-ghost" id="btnAddType">Ekle</button>
+          </div>
+          <div id="typeList" class="muted" style="font-size:13px"></div>
+        </details>
+
+        <details style="margin-top:8px" open>
+          <summary class="label-chip">Bulut Eşitleme (aktif)</summary>
+          <div class="hr"></div>
+          <div class="muted" style="font-size:13px">
+            Cloud URL bu sayfaya gömülü. Kayıt ekleme/silme anında otomatik senkron olur.
+          </div>
+          <div class="row">
+            <button class="btn btn-ghost" id="btnCloudPull">Buluttan Çek</button>
+            <button class="btn btn-ghost" id="btnCloudPush">Buluta Gönder</button>
           </div>
         </details>
 
-        <div class="row"><button class="btn" id="btnExport">Dışa Aktar (JSON)</button><button class="btn" id="btnImport">İçe Aktar</button><input type="file" id="fileImport" accept="application/json" style="display:none" /></div>
-        <div class="right"><button class="btn btn-danger" id="btnReset">Tüm Veriyi Sıfırla</button></div>
+        <div class="row">
+          <button class="btn btn-ghost" id="btnExport">Dışa Aktar (JSON)</button>
+          <button class="btn btn-ghost" id="btnImport">İçe Aktar</button>
+          <button class="btn btn-danger" id="btnReset">Tüm Veriyi Sıfırla</button>
+        </div>
       </div>
+
+      <!-- Sağ: Özet Tablo + Kayıtlar -->
       <div class="card">
-        <h2 style="text-align:center">Özet Tablo</h2>
-        <div id="summaryWrap" style="overflow:auto; max-height:420px"><table id="summaryTable"></table></div>
-        <h3 style="text-align:center">Kayıtlar</h3>
-        <div id="logWrap" style="overflow:auto; max-height:260px"><table id="logTable"></table></div>
+        <div class="section-title">Özet Tablo</div>
+        <div id="summary"></div>
+
+        <div class="hr"></div>
+        <div class="section-title">Kayıtlar</div>
+        <div id="log"></div>
       </div>
     </div>
   </div>
-<script>
-(function(){
-  const LS_KEY='gorevTakip_v9';
-  const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
-  const OTHER_TYPE='DIGER';
-  const $=s=>document.querySelector(s);
-  const today=()=>new Date().toISOString().slice(0,10);
-
-  let state; try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
-  if(!state){ state={people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK"],types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],records:[],lastByType:{}}; }
-  const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
-
-  function weightOfRecord(r){ if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1); if(r.type===OTHER_TYPE) return Math.max(1, Math.min(5, Number(r.points)||1)); return 1; }
-  function countsBy(type){ const m=new Map(state.people.map(p=>[p,0])); state.records.forEach(r=>{ if(!type||r.type===type){ m.set(r.person,(m.get(r.person)||0)+weightOfRecord(r)); } }); return m; }
-  function lastTimeBy(type){ const m=new Map(state.people.map(p=>[p,0])); state.records.forEach(r=>{ if(!type||r.type===type){ const t=new Date(r.start).getTime(); if(t>m.get(r.person)) m.set(r.person,t); } }); return m; }
-  function nextRR(type){ const list=state.people;if(!list.length)return null; const last=state.lastByType[type]; let idx=last?list.indexOf(last):-1; return list[(idx+1)%list.length]; }
-  function nextMin(type){ const c=countsBy(type); let best=null,bv=Infinity; for(const p of state.people){ const v=c.get(p)||0; if(v<bv){best=p;bv=v;} } return best; }
-  function nextIdle(type){ const m=lastTimeBy(type); let best=null,bv=Infinity; for(const p of state.people){ const v=m.get(p)||0; if(v<bv){best=p;bv=v;} } return best; }
-  function suggest(type){ if(type===OTHER_TYPE) return nextMin(type); const mode=document.querySelector('input[name=mode]:checked').value; if(mode==='rr') return nextRR(type); if(mode==='idle') return nextIdle(type); return nextMin(type); }
-
-  function toggleOtherInputs(){ const show=$('#taskType').value===OTHER_TYPE; $('#otherWrap').style.display= show? 'block':'none'; }
-
-  function initScorePicker(){
-    const boxes = document.querySelectorAll('#scorePicker .score-box');
-    const hidden = $('#pointsInput');
-    const label  = $('#scoreLabel');
-    boxes.forEach(b=>{
-      b.onclick=()=>{
-        boxes.forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');
-        hidden.value = b.dataset.val;
-        label.textContent = 'Seçili: '+hidden.value;
-      };
-    });
-    // init
-  try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); if(c.url) $('#cloudUrl').value=c.url; if(c.token) $('#cloudToken').value=c.token; }catch{}
-  (async()=>{ if(cloudEnabled()){ try{ await cloudPull(); toast('Buluttan çekildi',true);}catch(e){ /* sessiz */ } } render(); initScorePicker(); })();
-
-  // --- Cloud sync (Google Apps Script) ---
-  async function cloudPush(){
-    const url=$('#cloudUrl').value.trim(); if(!url) throw new Error('Bulut URL yok');
-    const payload={ token: $('#cloudToken').value||'', data: state };
-    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await res.json().catch(()=>({ok:false,error:'parse'})); if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
-    return true;
-  }
-  async function cloudPull(){
-    const url=$('#cloudUrl').value.trim(); if(!url) throw new Error('Bulut URL yok');
-    const token=$('#cloudToken').value||'';
-    const res=await fetch(url+`?token=${encodeURIComponent(token)}`); const j=await res.json();
-    if(!res.ok||!j.ok) throw new Error(j.error||'HTTP '+res.status);
-    state=j.data; save(); render(); return true;
-  }
-  const cloudEnabled=()=>($('#cloudUrl')&&$('#cloudUrl').value.trim().length>0);
-  let pushDebounce=null; function schedulePush(reason=''){
-    if(!cloudEnabled()) return; if(pushDebounce) clearTimeout(pushDebounce);
-    pushDebounce=setTimeout(async()=>{ try{ await cloudPush(); toast(`Buluta eşitlendi${reason?' • '+reason:''}`,true);}catch(e){ toast('Senkron hatası: '+(e.message||e),false);} finally{ pushDebounce=null; } }, 500);
-  }
-  function toast(msg, ok=true){
-    const t=document.createElement('div'); t.className='toast '+(ok?'ok':'err'); t.textContent=msg; document.body.appendChild(t);
-    setTimeout(()=>{ t.remove(); }, 2200);
-  }
-  $('#btnCloudPush').onclick=()=>cloudPush().then(()=>toast('Buluta gönderildi',true)).catch(e=>toast(e.message,false));
-  $('#btnCloudPull').onclick=()=>cloudPull().then(()=>toast('Buluttan çekildi',true)).catch(e=>toast(e.message,false));
-
-  /*  ==== Google Apps Script (sunucu kodu) örneği ====
-  // 1) script.google.com > New project > Apps Script
-  // 2) Aşağıdaki kodu yapıştırın, Deploy > New Deployment > Web App > Anyone with link
-  // 3) Çıkan URL'yi yukarıya "Bulut API URL" olarak girin
-
-  let STORE={};
-  function doGet(e){
-    const token=(e.parameter.token||'');
-    if(token && token!==(PropertiesService.getScriptProperties().getProperty('TOKEN')||''))
-      return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unauthorized'})).setMimeType(ContentService.MimeType.JSON);
-    const data=STORE.data||null; return ContentService.createTextOutput(JSON.stringify({ok:true,data:data||{people:[],types:[],records:[],lastByType:{}}})).setMimeType(ContentService.MimeType.JSON);
-  }
-  function doPost(e){
-    const body=JSON.parse(e.postData.contents||'{}');
-    if(body.token && body.token!==(PropertiesService.getScriptProperties().getProperty('TOKEN')||''))
-      return ContentService.createTextOutput(JSON.stringify({ok:false,error:'unauthorized'})).setMimeType(ContentService.MimeType.JSON);
-    STORE.data=body.data; return ContentService.createTextOutput(JSON.stringify({ok:true})).setMimeType(ContentService.MimeType.JSON);
-  }
-  // (İsterseniz Script Properties > TOKEN=xxxxx koyabilirsiniz)
-  */
-})();
-</script>
-  <script>
-    // --- PWA: Service Worker register + Install button ---
-    (function(){
-      if('serviceWorker' in navigator){
-        window.addEventListener('load', ()=>{
-          navigator.serviceWorker.register('./sw.js').catch(()=>{});
-        });
-      }
-      let deferredPrompt=null; const installBtn=document.createElement('button');
-      installBtn.textContent='Telefonuma Yükle'; installBtn.className='btn btn-prim';
-      installBtn.style.position='fixed'; installBtn.style.right='16px'; installBtn.style.bottom='16px'; installBtn.style.zIndex='9999'; installBtn.style.display='none';
-      document.body.appendChild(installBtn);
-      window.addEventListener('beforeinstallprompt', (e)=>{
-        e.preventDefault(); deferredPrompt=e; installBtn.style.display='block';
-      });
-      installBtn.addEventListener('click', async()=>{
-        if(!deferredPrompt) return; deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none';
-      });
-    })();
-    
-  </script>
 
 <script>
-// 🌩️ Cloud API ayarları
+/* =======================
+   Basit veri modeli
+======================= */
+const LS_KEY = 'gorevTakip_v1';
+const OTHER_TYPE = 'DIGER';
+
+// 🌩️ Cloud API URL'in SABİT (senin Apps Script URL'in)
 const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyTlgwK6b1P4w2m1u2yTTTJNz63w8MJ2RTBPTeQeOcQrmptZtVN8_u_doR1WTSXJPSd/exec";
 
-// Tarayıcıda cache’te veri varsa kullan, yoksa cloud’dan çek
-async function loadData() {
-    let localData = localStorage.getItem("gorevData");
-    if (localData) {
-        console.log("📦 Local veriler yüklendi");
-        renderTable(JSON.parse(localData));
-    } else {
-        console.log("☁️ Cloud’dan veri çekiliyor...");
-        try {
-            let res = await fetch(CLOUD_API_URL);
-            let json = await res.json();
-            if (json.ok && json.data) {
-                localStorage.setItem("gorevData", JSON.stringify(json.data));
-                renderTable(json.data);
-            }
-        } catch (err) {
-            console.error("Cloud veri çekme hatası:", err);
-        }
+let state = {
+  people: ['ATAL','KAVAKLI','YAMAN','AKSU','GORMEZ','TURGAY','ERDIK'],
+  types:  ['112-HABER MERKEZI','GAMER','MAC','GOCMEN',OTHER_TYPE],
+  lastByType: {},
+  records: [] // {type, person, start, end, days, (points,note)}
+};
+
+const $ = sel => document.querySelector(sel);
+
+/* =======================
+   Yardımcılar
+======================= */
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch{}
+}
+function toast(msg, ok=true){
+  const t = document.createElement('div');
+  t.className = 'toast ' + (ok?'ok':'err');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2000);
+}
+
+/* =======================
+   Cloud (Apps Script)
+======================= */
+async function cloudPull(){
+  const res = await fetch(CLOUD_API_URL);
+  const j = await res.json();
+  if(!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+  // Veri varsa al, yoksa local kalır
+  if(j.data && (j.data.people||j.data.records||j.data.types)){
+    state = j.data;
+    save();
+    render();
+  }
+  return true;
+}
+async function cloudPush(){
+  const res = await fetch(CLOUD_API_URL,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ data: state })
+  });
+  const j = await res.json();
+  if(!res.ok || !j.ok) throw new Error(j.error || ('HTTP '+res.status));
+  return true;
+}
+let pushDebounce=null;
+function schedulePush(reason=''){
+  if(pushDebounce) clearTimeout(pushDebounce);
+  pushDebounce = setTimeout(async()=>{
+    try{ await cloudPush(); toast('Buluta eşitlendi'+(reason?' • '+reason:''), true); }
+    catch(e){ toast('Senkron hatası: '+(e.message||e), false); }
+    finally{ pushDebounce=null; }
+  }, 500);
+}
+
+/* =======================
+   Render
+======================= */
+function render(){
+  // Tür/Person listeleri
+  const selType = $('#taskType');
+  const selPerson = $('#personSelect');
+  selType.innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
+  selPerson.innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
+  $('#otherBox').style.display = (selType.value===OTHER_TYPE?'block':'none');
+
+  // Özet tablo (kişiye göre tür sayıları)
+  const counts = {};
+  state.people.forEach(p=>{
+    counts[p] = {};
+    state.types.forEach(t=>counts[p][t]=0);
+    counts[p].TOPLAM = 0;
+  });
+  for(const r of state.records){
+    if(counts[r.person]){
+      if(r.type===OTHER_TYPE){
+        counts[r.person][OTHER_TYPE] += (Number(r.points)||1);
+        counts[r.person].TOPLAM += (Number(r.points)||1);
+      }else{
+        counts[r.person][r.type] += r.days||1;
+        counts[r.person].TOPLAM += r.days||1;
+      }
     }
+  }
+
+  const head = `<tr><th>PERSONEL</th>${state.types.map(t=>`<th>${t}</th>`).join('')}<th>TOPLAM</th></tr>`;
+  const rows = state.people.map(p=>{
+    const tds = state.types.map(t=>`<td>${counts[p][t]||0}</td>`).join('');
+    return `<tr><td class="label-chip" style="text-align:left">${p}</td>${tds}<td><b>${counts[p].TOPLAM||0}</b></td></tr>`;
+  }).join('');
+  $('#summary').innerHTML = `<table>${head}${rows}</table>`;
+
+  // Kayıtlar
+  const log = $('#log');
+  if(!state.records.length){ log.innerHTML = `<div class="muted">Henüz kayıt yok.</div>`; return; }
+  let html = `<table><thead><tr>
+      <th>BAŞLANGIÇ</th><th>BİTİŞ</th><th>TÜR</th><th>KİŞİ</th><th>GÜN</th><th>PUAN</th><th>AÇIKLAMA</th><th></th>
+    </tr></thead><tbody>`;
+  state.records.forEach((r,i)=>{
+    html += `<tr>
+      <td>${r.start}</td>
+      <td>${r.end}</td>
+      <td>${r.type}</td>
+      <td>${r.person}</td>
+      <td>${r.days||''}</td>
+      <td>${r.points||''}</td>
+      <td style="text-align:left">${r.note||''}</td>
+      <td><button class="btn btn-ghost" data-del="${i}">Sil</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  log.innerHTML = html;
+
+  // Sil butonları
+  log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
+    const idx = +b.getAttribute('data-del');
+    state.records.splice(idx,1);
+    save(); render(); schedulePush('silme');
+  });
+
+  // Kişi / tür listeleri
+  $('#peopleList').innerHTML = state.people.map(p=>{
+    return `<span class="label-chip" style="margin:2px">${p}
+              <button class="btn btn-ghost" style="margin-left:6px;padding:2px 6px" data-delp="${p}">x</button>
+            </span>`;
+  }).join('');
+  $('#peopleList').querySelectorAll('button[data-delp]').forEach(b=>b.onclick=()=>{
+    const p = b.getAttribute('data-delp');
+    if(!confirm(`${p} silinsin mi?`)) return;
+    state.people = state.people.filter(x=>x!==p);
+    save(); render(); schedulePush('personel sil');
+  });
+
+  $('#typeList').innerHTML = state.types.map(t=>{
+    return `<span class="label-chip" style="margin:2px">${t}
+              <button class="btn btn-ghost" style="margin-left:6px;padding:2px 6px" data-delt="${t}">x</button>
+            </span>`;
+  }).join('');
+  $('#typeList').querySelectorAll('button[data-delt]').forEach(b=>b.onclick=()=>{
+    const t = b.getAttribute('data-delt');
+    if(state.types.length<=1) return alert('En az bir tür kalmalı.');
+    if(!confirm(`${t} silinsin mi?`)) return;
+    state.types = state.types.filter(x=>x!==t);
+    save(); render(); schedulePush('tür sil');
+  });
 }
 
-// Cloud’a veri gönder (ekleme/silme/güncelleme sonrası)
-async function syncToCloud(data) {
-    try {
-        await fetch(CLOUD_API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data })
-        });
-        console.log("☁️ Cloud’a senkronize edildi");
-    } catch (err) {
-        console.error("Cloud senkronizasyon hatası:", err);
-    }
-}
+/* =======================
+   Olaylar
+======================= */
+$('#taskType').addEventListener('change',()=>{
+  $('#otherBox').style.display = ($('#taskType').value===OTHER_TYPE ? 'block':'none');
+});
 
-// Ekleme örneği (senin mevcut ekleme fonksiyonuna entegre edilir)
-function addRecord(item) {
-    let data = JSON.parse(localStorage.getItem("gorevData")) || { people: [], types: [], records: [], lastByType: {} };
-    data.records.push(item);
-    localStorage.setItem("gorevData", JSON.stringify(data));
-    syncToCloud(data); // ☁️ otomatik buluta gönder
-    renderTable(data);
-}
+$('#btnAdd').onclick=()=>{
+  const type = $('#taskType').value;
+  const person = $('#personSelect').value;
+  const s = $('#startDate').value;
+  const e = $('#endDate').value;
+  if(!type||!person||!s) return alert('Eksik bilgi');
 
-// Tabloyu çizmek için örnek fonksiyon
-function renderTable(data) {
-    console.log("Tablo verisi:", data);
-    // senin tablo doldurma kodun buraya entegre edilir
-}
+  let end = e;
+  if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
+  let days = Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1;
 
-// Sayfa yüklendiğinde otomatik başlat
-document.addEventListener("DOMContentLoaded", loadData);
+  const rec = {type, person, start:s, end:end, days};
+  if(type===OTHER_TYPE){
+    rec.points = Math.max(1, Math.min(5, Number($('#pointsInput').value||'1')));
+    rec.note = ($('#noteInput').value||'').trim();
+  }
+
+  state.records.push(rec);
+  state.lastByType[type]=person;
+  save(); render();
+  if(type===OTHER_TYPE) $('#noteInput').value='';
+  schedulePush('ekleme');
+};
+
+$('#btnSuggest').onclick=()=>{
+  // En az görev yapan kişiyi öner (basit)
+  const type = $('#taskType').value;
+  const perCounts = {};
+  state.people.forEach(p=>perCounts[p]=0);
+  state.records.filter(r=>r.type===type).forEach(r=>perCounts[r.person]=(perCounts[r.person]||0)+ (r.days||1));
+  const sorted = Object.entries(perCounts).sort((a,b)=>a[1]-b[1]);
+  if(sorted.length) $('#personSelect').value = sorted[0][0];
+};
+
+$('#btnAddPerson').onclick=()=>{
+  const v = $('#newPerson').value.trim(); if(!v) return;
+  if(!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; save(); render(); schedulePush('personel'); }
+};
+$('#btnAddType').onclick=()=>{
+  const v = $('#newType').value.trim(); if(!v) return;
+  if(!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; save(); render(); schedulePush('tür'); }
+};
+
+$('#btnCloudPull').onclick=()=>cloudPull().then(()=>toast('Buluttan çekildi',true)).catch(e=>toast(e.message,false));
+$('#btnCloudPush').onclick=()=>cloudPush().then(()=>toast('Buluta gönderildi',true)).catch(e=>toast(e.message,false));
+
+$('#btnExport').onclick=()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-data.json'; a.click();
+};
+$('#btnImport').onclick=()=>{
+  const i=document.createElement('input'); i.type='file'; i.accept='.json,application/json';
+  i.onchange=()=>{ const f=i.files[0]; const r=new FileReader(); r.onload=()=>{
+      try{ state=JSON.parse(r.result); save(); render(); schedulePush('içe aktar'); }
+      catch(e){ alert('Geçersiz dosya.'); }
+  }; r.readAsText(f); }; i.click();
+};
+$('#btnReset').onclick=()=>{ if(confirm('Tüm veriyi sıfırlamak istiyor musun?')){ localStorage.removeItem(LS_KEY); state.records=[]; save(); render(); schedulePush('sıfırlama'); } };
+
+/* =======================
+   Başlangıç
+======================= */
+load();
+render();
+// sayfa açılışında buluttan çek (varsa)
+(async()=>{ try{ await cloudPull(); toast('Buluttan çekildi',true);}catch(e){} })();
 </script>
 
-  
+<script>
+// Service Worker (PWA) kaydı
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
+}
+</script>
 </body>
 </html>
-
-<!-- ============================
-     PWA DOSYALARI (aynı klasöre kaydet)
-     ============================ -->
-
-<!-- manifest.webmanifest -->
-<script type="application/json" id="__pwa_manifest">
-{
-  "name": "Görev Takibi",
-  "short_name": "GörevTakip",
-  "start_url": ".",
-  "scope": ".",
-  "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
-  ]
-}
-</script>
-
-<!-- sw.js (Service Worker) -->
-<script type="text/plain" id="__pwa_sw">
-const CACHE_NAME = 'gorev-takip-v1';
-const ASSETS = [
-  './',
-  './index.html', // kendi dosya adını yaz: gorev_takip.html gibi
-  './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
-];
-self.addEventListener('install', e=>{
-  e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
-});
-self.addEventListener('activate', e=>{
-  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e=>{
-  e.respondWith(
-    caches.match(e.request).then(r=> r || fetch(e.request).then(res=>{
-      const copy = res.clone();
-      caches.open(CACHE_NAME).then(c=>{ if(e.request.method==='GET' && res.ok) c.put(e.request, copy); });
-      return res;
-    }).catch(()=> caches.match('./')))
-  );
-});
-</script>
-
-<!-- Hızlı kurulum notu:
-1) Bu HTML dosyasının adını örn. index.html yapın.
-2) Aynı klasöre iki dosya oluşturun: manifest.webmanifest ve sw.js
-   - Yukarıdaki <script id="__pwa_manifest"> içeriğini manifest.webmanifest olarak kaydedin.
-   - Yukarıdaki <script id="__pwa_sw"> içeriğini sw.js olarak kaydedin.
-   - icons/ klasörü açıp 192 ve 512 px PNG ikonları koyun (geçici olarak aynı resmi iki boyutta kullanabilirsiniz).
-3) Dosyaları bir http sunucusundan servis edin:
-   - IIS/Apache/Nginx veya GitHub Pages/Netlify.
-   - (Dosyaları sadece dosya:// ile açarsanız service worker çalışmaz.)
-4) Telefon tarayıcısından siteyi ziyaret edin, ekranda çıkan “Telefonuma Yükle” düğmesi veya tarayıcı menüsündeki “Ana ekrana ekle” ile kurulumu yapın.
-5) iOS: Safari’de paylaş menüsü → Ana Ekrana Ekle.
--->
-
