@@ -1,5 +1,5 @@
 // sw.js — güvenli, sade cache
-const CACHE = 'gorev-takip-v7';
+const CACHE = 'gorev-takip-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -12,12 +12,18 @@ const ASSETS = [
 function canCache(req) {
   try {
     const u = new URL(req.url);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false; // chrome-extension vs.
-    // Harici domainleri (script.google.com gibi) cache’lemek istemiyorsak aşağıyı aç:
-    // if (u.origin !== self.location.origin) return false;
+    // Sadece http(s) olsun
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    // chrome-extension, devtools, blob, data: URI gibi şeyleri engelle
+    if (u.protocol.startsWith('chrome-extension') || u.protocol.startsWith('devtools') || u.protocol.startsWith('data:') || u.protocol.startsWith('blob:')) return false;
+    // sadece aynı domain cache’le
+    if (u.origin !== self.location.origin) return false;
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }
+
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -53,3 +59,4 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(req))
   );
 });
+
