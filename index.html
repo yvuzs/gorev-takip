@@ -1,181 +1,382 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Görev Takibi</title>
-<link rel="manifest" href="./manifest.webmanifest">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Görev Takibi (Veritabanısız)</title>
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #0f1624;
-  color: #fff;
-  margin: 0; padding: 0;
-  display: flex; justify-content: center; align-items: flex-start;
-  min-height: 100vh;
-}
-.card {
-  background: #161d2e;
-  border-radius: 16px;
-  padding: 1rem 1.5rem;
-  margin: 1rem;
-  box-shadow: 0 0 10px #0004;
-}
-button {
-  border: none; border-radius: 8px;
-  padding: .5rem 1rem;
-  cursor: pointer; font-weight: 500;
-}
-#toast {
-  position: fixed; bottom: 1rem; right: 1rem;
-  background: #222c; color: #fff;
-  padding: .5rem 1rem; border-radius: 6px;
-  opacity: 0; transition: opacity .4s;
-}
-#toast.show { opacity: 1; }
+  :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:#e5e7eb}
+  .wrap{max-width:1200px;margin:auto;padding:24px}
+  h1{margin:0 0 10px;font-weight:800;font-size:22px;text-align:center}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
+  .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  label{display:block;margin:10px 0 6px;color:#cbd5e1;font-weight:600}
+  input[type=text],input[type=date],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
+  textarea{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+  .row{display:flex;gap:8px;align-items:center}
+  .row>*{flex:1}
+  .btn{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
+  .btn.small{padding:4px 8px;font-size:12px;border-radius:8px}
+  .btn:hover{filter:brightness(1.15)}
+  .btn-prim{background:linear-gradient(135deg,var(--accent2),#06b6d4);border:0;color:white}
+  .btn-good{background:linear-gradient(135deg,var(--accent),#16a34a);border:0;color:white}
+  .btn-danger{background:linear-gradient(135deg,#ef4444,#f97316);border:0;color:white}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;background:var(--chip);border:1px solid #334155}
+  .muted{color:var(--muted)}
+  table{width:100%;border-collapse:collapse;text-align:center}
+  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:center;vertical-align:middle}
+  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+  tbody tr:hover{background:#0b1220}
+  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block;text-align:center}
+  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block;text-align:center}
+  .stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .small{font-size:12px}
+  .right{display:flex;gap:8px;justify-content:flex-end}
+  details{border:1px dashed #334155;border-radius:12px;padding:10px}
+  summary{cursor:pointer;color:#93c5fd}
+  /* Puan seçici */
+  .score-picker{display:flex;gap:6px;justify-content:center;margin-top:6px}
+  .score-box{width:40px;height:24px;border-radius:6px;border:1px solid #444;cursor:pointer;opacity:.85;transition:transform .12s, opacity .12s, box-shadow .12s}
+  .score-box:hover{opacity:1;transform:translateY(-1px)}
+  .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
+  .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
+  @media (max-width: 900px){
+    .grid{grid-template-columns:1fr}
+    .wrap{padding:16px}
+    .card{padding:14px}
+    h1{font-size:20px}
+    .btn{padding:12px 14px}
+    table{font-size:13px}
+  }
 </style>
 </head>
 <body>
+  <div class="wrap">
+    <h1>Görev Takibi <span class="muted">(localStorage ile)</span></h1>
+    <div class="grid">
+      <div class="card">
+        <h2>Yeni Kayıt</h2>
+        <div class="row">
+          <div>
+            <label>Görev Türü</label>
+            <select id="taskType"></select>
+          </div>
+          <div>
+            <label>Kişi <span class="muted small" id="suggestHint"></span></label>
+            <select id="personSelect"></select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Başlangıç Tarihi</label>
+            <input id="startDate" type="date" />
+          </div>
+          <div>
+            <label>Bitiş Tarihi (opsiyonel)</label>
+            <input id="endDate" type="date" />
+          </div>
+        </div>
 
-<div class="card" style="width:260px;">
-  <h2>Yeni Kayıt</h2>
-  <label>Görev Türü</label><br>
-  <input id="taskType" list="typeList" placeholder="Tür seç"><br>
-  <datalist id="typeList"></datalist>
-  <br>
-  <label>Kişi</label><br>
-  <input id="person" list="personList" placeholder="Personel"><br>
-  <datalist id="personList"></datalist>
-  <br>
-  <button onclick="addRecord()">Kaydı Ekle</button>
-  <hr>
-  <button onclick="exportJSON()">Dışa Aktar (JSON)</button>
-  <button onclick="importJSON()">İçe Aktar</button>
-  <hr>
-  <button onclick="resetAll()" style="background:#c33;color:#fff">Tüm Veriyi Sıfırla</button>
-</div>
+        <div id="otherWrap" style="display:none">
+          <label>Diğer Görev Puanı (1–5) & Açıklama</label>
+          <div class="score-picker" id="scorePicker">
+            <div class="score-box" data-val="1" style="background:#fff7b2"></div>
+            <div class="score-box" data-val="2" style="background:#ffe44d"></div>
+            <div class="score-box" data-val="3" style="background:#ffd32d"></div>
+            <div class="score-box" data-val="4" style="background:#ffa64d"></div>
+            <div class="score-box" data-val="5" style="background:#e82929"></div>
+          </div>
+          <span class="score-label" id="scoreLabel">Seçili: 1</span>
+          <input id="pointsInput" type="hidden" value="1" />
+          <div class="row" style="margin-top:8px">
+            <input id="noteInput" type="text" placeholder="Açıklama (ör. eğitim desteği, evrak dağıtımı...)" />
+          </div>
+        </div>
 
-<div class="card" style="flex:1;">
-  <h2>Özet Tablo</h2>
-  <div id="records"></div>
-</div>
+        <label>Atama Stratejisi</label>
+        <div class="stack small" id="modeRadios">
+          <label class="chip"><input type="radio" name="mode" value="rr"> Round-Robin</label>
+          <label class="chip"><input type="radio" name="mode" value="min" checked> En az görev yapan</label>
+          <label class="chip"><input type="radio" name="mode" value="idle"> En uzun süredir görev almayan</label>
+        </div>
 
-<button id="installBtn" style="position:fixed;bottom:1rem;left:1rem;background:#4b9;color:#fff;border:none;padding:.6rem 1rem;border-radius:8px;display:none;">Telefonuma Yükle</button>
+        <div class="row">
+          <button class="btn btn-good" id="btnSuggest">Sıradaki Öner</button>
+          <button class="btn btn-prim" id="btnAdd">Kaydı Ekle</button>
+        </div>
 
-<div id="toast"></div>
+        <details>
+          <summary>Personel ve Tür Listeleri</summary>
+          <div class="row"><input id="newPerson" type="text" placeholder="Yeni personel adı" /><button class="btn" id="btnAddPerson">Ekle</button></div>
+          <div class="stack" id="peopleChips"></div>
+          <label>Görev Türleri</label>
+          <div class="stack" id="typeChips"></div>
+          <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="btnAddType">Ekle</button></div>
+        </details>
+
+        <details>
+          <summary>Bulut Eşitleme</summary>
+          <label>Bulut API URL (Apps Script Web App)</label>
+          <input id="cloudUrl" type="text" placeholder="https://script.google.com/.../exec" />
+          <div class="row">
+            <input id="cloudToken" type="text" placeholder="Gizli anahtar (opsiyonel)" />
+            <button class="btn" id="btnCloudPull">Buluttan Çek</button>
+            <button class="btn" id="btnCloudPush">Buluta Gönder</button>
+          </div>
+        </details>
+
+        <div class="row">
+          <button class="btn" id="btnExport">Dışa Aktar (JSON)</button>
+          <button class="btn" id="btnImport">İçe Aktar</button>
+          <input type="file" id="fileImport" accept="application/json" style="display:none" />
+        </div>
+        <div class="right"><button class="btn btn-danger" id="btnReset">Tüm Veriyi Sıfırla</button></div>
+      </div>
+
+      <div class="card">
+        <h2 style="text-align:center">Özet Tablo</h2>
+        <div id="summaryWrap" style="overflow:auto; max-height:420px"><table id="summaryTable"></table></div>
+        <h3 style="text-align:center">Kayıtlar</h3>
+        <div id="logWrap" style="overflow:auto; max-height:260px"><table id="logTable"></table></div>
+      </div>
+    </div>
+  </div>
 
 <script>
-/* ====== Uygulama verisi ====== */
-let state = { people: [], types: [], records: [] };
-const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycbyTlgwK6b1P4w2m1u2yTTTJNz63w8MJ2RTBPTeQeOcQrmptZtVN8_u_doR1WTSXJPSd/exec";
+(function(){
+  /* ===== State & helpers ===== */
+  const LS_KEY='gorevTakip_v9';
+  const OTHER_TYPE='DIGER';
+  const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
+  const $=s=>document.querySelector(s);
+  const today=()=>new Date().toISOString().slice(0,10);
 
-/* ====== Local Storage ====== */
-function save(){ localStorage.setItem('gorevData', JSON.stringify(state)); }
-function load(){
-  const s = localStorage.getItem('gorevData');
-  if(s) state = JSON.parse(s);
-}
-
-/* ====== Arayüz ====== */
-function render(){
-  document.getElementById('personList').innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
-  document.getElementById('typeList').innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
-  document.getElementById('records').innerHTML =
-    state.records.length ?
-      `<ul>${state.records.map(r=>`<li>${r.type} → ${r.person}</li>`).join('')}</ul>` :
-      "<i>Henüz kayıt yok</i>";
-}
-
-/* ====== Kayıt işlemleri ====== */
-function addRecord(){
-  const t = document.getElementById('taskType').value.trim();
-  const p = document.getElementById('person').value.trim();
-  if(!t||!p) return toast("Lütfen tür ve kişi gir.");
-  if(!state.types.includes(t)) state.types.push(t);
-  if(!state.people.includes(p)) state.people.push(p);
-  state.records.push({type:t, person:p, date:Date.now()});
-  save(); render(); schedulePush("ekleme");
-}
-function resetAll(){
-  if(confirm("Tüm veriler silinsin mi?")){
-    state = {people:[], types:[], records:[]};
-    save(); render(); schedulePush("sıfırlama");
+  let state; try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
+  if(!state){
+    state={
+      people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK"],
+      types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
+      records:[],
+      lastByType:{}
+    };
   }
-}
+  const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
 
-/* ====== Dışa/İçe aktar ====== */
-function exportJSON(){
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,2)], {type:"application/json"}));
-  a.download = "gorevData.json"; a.click();
-}
-function importJSON(){
-  const i = document.createElement('input'); i.type="file"; i.accept=".json";
-  i.onchange = e=>{
-    const f = e.target.files[0]; if(!f) return;
-    f.text().then(t=>{
-      try{ state = JSON.parse(t); save(); render(); schedulePush("içe aktarım"); }
-      catch{ toast("Geçersiz JSON"); }
+  function weightOfRecord(r){
+    if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
+    if(r.type===OTHER_TYPE)   return Math.max(1, Math.min(5, Number(r.points)||1));
+    return 1;
+  }
+  function countsBy(type){
+    const m=new Map(state.people.map(p=>[p,0]));
+    state.records.forEach(r=>{
+      if(!type || r.type===type){
+        m.set(r.person,(m.get(r.person)||0)+weightOfRecord(r));
+      }
     });
+    return m;
+  }
+  function lastTimeBy(type){
+    const m=new Map(state.people.map(p=>[p,0]));
+    state.records.forEach(r=>{
+      if(!type || r.type===type){
+        const t=new Date(r.start).getTime();
+        if(t>m.get(r.person)) m.set(r.person,t);
+      }
+    });
+    return m;
+  }
+  function nextRR(type){
+    const list=state.people;if(!list.length)return null;
+    const last=state.lastByType[type]; let idx=last?list.indexOf(last):-1;
+    return list[(idx+1)%list.length];
+  }
+  function nextMin(type){
+    const c=countsBy(type); let best=null,bv=Infinity;
+    for(const p of state.people){ const v=c.get(p)||0; if(v<bv){best=p;bv=v;} }
+    return best;
+  }
+  function nextIdle(type){
+    const m=lastTimeBy(type); let best=null,bv=Infinity;
+    for(const p of state.people){ const v=m.get(p)||0; if(v<bv){best=p;bv=v;} }
+    return best;
+  }
+  function suggest(type){
+    if(type===OTHER_TYPE) return nextMin(type);
+    const mode=document.querySelector('input[name=mode]:checked').value;
+    if(mode==='rr')   return nextRR(type);
+    if(mode==='idle') return nextIdle(type);
+    return nextMin(type);
+  }
+
+  function toggleOtherInputs(){
+    const show=$('#taskType').value===OTHER_TYPE;
+    $('#otherWrap').style.display= show? 'block':'none';
+  }
+  function initScorePicker(){
+    const boxes = document.querySelectorAll('#scorePicker .score-box');
+    const hidden = $('#pointsInput');
+    const label  = $('#scoreLabel');
+    boxes.forEach(b=>{
+      b.onclick=()=>{
+        boxes.forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        hidden.value = b.dataset.val;
+        label.textContent = 'Seçili: '+hidden.value;
+      };
+    });
+    (boxes[0]||{}).click?.();
+  }
+
+  /* ===== Render ===== */
+  function render(){
+    // persist cloud settings
+    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||'', token: $('#cloudToken')?.value||''}));
+
+    $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
+    $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
+    if(!$('#startDate').value) $('#startDate').value=today();
+    toggleOtherInputs();
+
+    const types=state.types; const tbl=$('#summaryTable');
+    const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
+    const siraCells=types.map(t=>`<td><span class="pill">${suggest(t)||'-'}</span></td>`).join('');
+    const siraRow=`<tr><td class="muted small">Sıra</td>${siraCells}<td></td></tr>`;
+    const rows=state.people.map(p=>{
+      const cells=types.map(t=>countsBy(t).get(p)||0);
+      const tot=cells.reduce((a,b)=>a+b,0);
+      return `<tr><td><span class="kbadge">${p}</span></td>${cells.map(c=>`<td>${c}</td>`).join('')}<td><b>${tot}</b></td></tr>`;
+    }).join('');
+    tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
+
+    // chips
+    const pc=$('#peopleChips'); pc.innerHTML='';
+    state.people.forEach(p=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${p}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
+        state.people=state.people.filter(x=>x!==p); save(); render(); schedulePush('personel sil');
+      };
+      w.appendChild(d); pc.appendChild(w);
+    });
+
+    const tc=$('#typeChips'); tc.innerHTML='';
+    state.types.forEach(t=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${t}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(state.types.length<=1) return alert('En az bir tür kalmalı.');
+        if(!confirm(`${t} silinsin mi?`)) return;
+        state.types=state.types.filter(x=>x!==t); save(); render(); schedulePush('tür sil');
+      };
+      w.appendChild(d); tc.appendChild(w);
+    });
+
+    const log=$('#logTable');
+    log.innerHTML='<thead><tr><th><span class="pill">BAŞLANGIÇ</span></th><th><span class="pill">BİTİŞ</span></th><th><span class="pill">TÜR</span></th><th><span class="pill">KİŞİ</span></th><th><span class="pill">PUAN</span></th><th><span class="pill">AÇIKLAMA</span></th><th></th></tr></thead><tbody>'+
+      state.records.slice().reverse().map((r,i)=>{
+        const idx=state.records.length-1-i;
+        const p=(r.type===OTHER_TYPE)?(r.points||''):'';
+        const note=(r.type===OTHER_TYPE)?(r.note||''):'';
+        return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}</td><td>${r.person}</td><td>${p}</td><td>${note}</td>
+          <td><button class="btn small" data-del="${idx}">Sil</button></td></tr>`;
+      }).join('')+'</tbody>';
+    log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
+      const idx=+b.getAttribute('data-del');
+      state.records.splice(idx,1); save(); render(); schedulePush('silme');
+    });
+  }
+
+  /* ===== Actions ===== */
+  $('#taskType').onchange=()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
+  $('#btnSuggest').onclick=()=>{ const t=$('#taskType').value; const p=suggest(t); $('#suggestHint').textContent=p?`(öneri: ${p})`:''; if(p) $('#personSelect').value=p; };
+
+  $('#btnAdd').onclick=()=>{
+    const type=$('#taskType').value, person=$('#personSelect').value;
+    const s=$('#startDate').value, e=$('#endDate').value;
+    if(!type||!person||!s) return alert('Eksik bilgi');
+    let end=e;
+    if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
+    let days=Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1;
+    const rec={type,person,start:s,end:end,days};
+    if(type===OTHER_TYPE){
+      rec.points=Math.max(1,Math.min(5,Number($('#pointsInput').value||'1')));
+      rec.note=($('#noteInput').value||'').trim();
+      $('#noteInput').value='';
+    }
+    state.records.push(rec);
+    state.lastByType[type]=person;
+    save(); render(); schedulePush('ekleme');
   };
-  i.click();
-}
 
-/* ====== Bulut Senkron (Apps Script) ====== */
-async function cloudPush(){
-  const res = await fetch(CLOUD_API_URL,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({data:state})
-  });
-  const j = await res.json();
-  if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
-  return true;
-}
-async function cloudPull(){
-  const res = await fetch(CLOUD_API_URL);
-  const j = await res.json();
-  if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
-  if(j.data){ state=j.data; save(); render(); }
-}
-let pushDebounce=null;
-function schedulePush(reason=''){
-  if(pushDebounce) clearTimeout(pushDebounce);
-  pushDebounce=setTimeout(async()=>{
-    try{ await cloudPush(); toast('Buluta eşitlendi'+(reason?' • '+reason:''),true); }
-    catch(e){ console.error(e); toast('Senkron hatası: '+e.message,false); }
-    finally{ pushDebounce=null; }
-  },600);
-}
+  $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
 
-/* ====== Yardımcılar ====== */
-function toast(msg, ok){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.style.background=ok?'#2b4':'#c33';
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
-}
+  $('#btnAddPerson').onclick=()=>{ const v=$('#newPerson').value.trim();
+    if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; save(); render(); schedulePush('personel'); }
+  };
+  $('#btnAddType').onclick=()=>{ const v=$('#newType').value.trim();
+    if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; save(); render(); schedulePush('tür'); }
+  };
 
-/* ====== Başlat ====== */
-load(); render();
-(async()=>{ try{ await cloudPull(); toast('Buluttan çekildi',true);}catch(e){} })();
+  $('#btnExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-takip.json'; a.click(); };
+  $('#btnImport').onclick=()=>$('#fileImport').click();
+  $('#fileImport').onchange=async(e)=>{ const f=e.target.files[0]; if(!f) return; try{
+    const t=await f.text(); const data=JSON.parse(t);
+    if(!data.people||!data.types||!Array.isArray(data.records)) throw new Error('Şema hatalı');
+    state=data; save(); render(); schedulePush('içe aktarım');
+  }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
+  document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ render(); $('#btnSuggest').click(); });
 
-/* ====== PWA / Service Worker ====== */
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
-}
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault(); deferredPrompt=e;
-  document.getElementById('installBtn').style.display='block';
-});
-document.getElementById('installBtn').onclick=async()=>{
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const {outcome}=await deferredPrompt.userChoice;
-  if(outcome==='accepted') toast('Uygulama yüklendi',true);
-  deferredPrompt=null;
-};
+  // cloud settings restore
+  try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); if(c.url) $('#cloudUrl').value=c.url; if(c.token) $('#cloudToken').value=c.token; }catch{}
+
+  render(); initScorePicker();
+
+  /* ===== Bulut Senkron (Apps Script, preflight’sız) ===== */
+  let pushDebounce=null;
+  function schedulePush(reason=''){
+    if(pushDebounce) clearTimeout(pushDebounce);
+    pushDebounce=setTimeout(async()=>{
+      try{ await cloudPush(); console.log('Buluta eşitlendi', reason); }
+      catch(e){ console.warn('Senkron hatası:', e); }
+      finally{ pushDebounce=null; }
+    }, 600);
+  }
+
+  async function cloudPush(){
+    const url=$('#cloudUrl').value.trim(); if(!url) return;
+    const payload={ token: $('#cloudToken').value||'', data: state };
+    const res=await fetch(url,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // preflight yok
+      body:JSON.stringify(payload)
+    });
+    const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
+    return true;
+  }
+  async function cloudPull(){
+    const url=$('#cloudUrl').value.trim(); if(!url) return;
+    const token=$('#cloudToken').value||'';
+    const res=await fetch(url+`?token=${encodeURIComponent(token)}`);
+    const j=await res.json();
+    if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
+    state=j.data; save(); render();
+    return true;
+  }
+  $('#btnCloudPush').onclick=()=>cloudPush().then(()=>alert('Buluta gönderildi.')).catch(e=>alert(e.message));
+  $('#btnCloudPull').onclick=()=>cloudPull().then(()=>alert('Buluttan çekildi.')).catch(e=>alert(e.message));
+
+  // Sayfa açılışında otomatik buluttan çek (URL girilmişse)
+  (async()=>{ try{ await cloudPull(); }catch(_){ /* sessiz */ } })();
+
+  // SW kaydı sende; yalnız index tarafında da şu şekilde kalabilir:
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
+  }
+})();
 </script>
 </body>
 </html>
