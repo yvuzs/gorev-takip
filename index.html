@@ -1,10 +1,11 @@
 <!doctype html>
 <html lang="tr">
-<link rel="manifest" href="./manifest.webmanifest" />
-<meta name="theme-color" content="#0f172a" />
-<link rel="icon" href="icons/icon-192.png" />
 <head>
 <meta charset="utf-8" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Görev Takibi (Veritabanısız)</title>
 <style>
@@ -55,6 +56,19 @@
     .btn{padding:12px 14px}
     table{font-size:13px}
   }
+  /* --- Responsive (mobile) --- */
+  @media (max-width: 900px){
+    .grid{grid-template-columns:1fr}
+    .wrap{padding:16px}
+    .card{padding:14px}
+    h1{font-size:20px}
+    .btn{padding:12px 14px}
+    table{font-size:13px}
+  }
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#0b1220;border:1px solid #334155;color:#e5e7eb;padding:8px 12px;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.35);z-index:9999;opacity:.98}
+  .toast.ok{border-color:#16a34a}
+  .toast.err{border-color:#ef4444}
 </style>
 </head>
 <body>
@@ -173,89 +187,36 @@
         label.textContent = 'Seçili: '+hidden.value;
       };
     });
-    // initial active
-    const startVal = hidden.value || '1';
-    const def = Array.from(boxes).find(x=>x.dataset.val===startVal) || boxes[0];
-    def.click();
-  }
-
-  function render(){
-    // persist cloud settings
-    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||'', token: $('#cloudToken')?.value||''}));
-    // helper subrenders for chips
-    function renderPeopleChips(){
-      const host = document.querySelector('#peopleChips'); if(!host) return; host.innerHTML='';
-      state.people.forEach(p=>{
-        const wrap = document.createElement('span'); wrap.className='chip';
-        const name = document.createElement('span'); name.textContent=p; wrap.appendChild(name);
-        const del = document.createElement('button'); del.className='btn small'; del.textContent='Sil'; del.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return; state.people = state.people.filter(x=>x!==p); save(); render(); };
-        wrap.appendChild(del); host.appendChild(wrap);
-      });
-    }
-    function renderTypeChips(){
-      const host = document.querySelector('#typeChips'); if(!host) return; host.innerHTML='';
-      state.types.forEach(t=>{
-        const wrap = document.createElement('span'); wrap.className='chip';
-        const name = document.createElement('span'); name.textContent=t; wrap.appendChild(name);
-        const del = document.createElement('button'); del.className='btn small'; del.textContent='Sil'; del.onclick=()=>{ if(state.types.length<=1) return alert('En az bir tür kalmalı.'); if(!confirm(`${t} silinsin mi?`)) return; state.types = state.types.filter(x=>x!==t); save(); render(); };
-        wrap.appendChild(del); host.appendChild(wrap);
-      });
-    }
-
-    $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
-    $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
-    if(!$('#startDate').value) $('#startDate').value=today();
-    toggleOtherInputs();
-
-    const types=state.types; const tbl=$('#summaryTable');
-    const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
-    const siraCells=types.map(t=>`<td><span class="pill">${suggest(t)||'-'}</span></td>`).join('');
-    const siraRow=`<tr><td class="muted small">Sıra</td>${siraCells}<td></td></tr>`;
-    const rows=state.people.map(p=>{const cells=types.map(t=>countsBy(t).get(p)||0);const tot=cells.reduce((a,b)=>a+b,0);return `<tr><td><span class="kbadge">${p}</span></td>${cells.map(c=>`<td>${c}</td>`).join('')}<td><b>${tot}</b></td></tr>`;}).join('');
-    tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
-
-    // render chips
-    renderPeopleChips();
-    renderTypeChips();
-
-    const log=$('#logTable');
-    log.innerHTML='<thead><tr><th><span class="pill">BAŞLANGIÇ</span></th><th><span class="pill">BİTİŞ</span></th><th><span class="pill">TÜR</span></th><th><span class="pill">KİŞİ</span></th><th><span class="pill">PUAN</span></th><th><span class="pill">AÇIKLAMA</span></th><th></th></tr></thead><tbody>'+state.records.slice().reverse().map((r,i)=>{const idx=state.records.length-1-i;const p=(r.type===OTHER_TYPE)?(r.points||''):'';const note=(r.type===OTHER_TYPE)?(r.note||''):'';return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}</td><td>${r.person}</td><td>${p}</td><td>${note}</td><td><button class="btn small" data-del="${idx}">Sil</button></td></tr>`;}).join('')+'</tbody>';
-    log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{const idx=+b.getAttribute('data-del');state.records.splice(idx,1);save();render();});
-  }
-
-  // actions
-  $('#taskType').onchange=()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
-  $('#btnSuggest').onclick=()=>{ const t=$('#taskType').value; const p=suggest(t); $('#suggestHint').textContent=p?`(öneri: ${p})`:''; if(p) $('#personSelect').value=p; };
-  $('#btnAdd').onclick=()=>{ const type=$('#taskType').value, person=$('#personSelect').value; const s=$('#startDate').value, e=$('#endDate').value; if(!type||!person||!s) return alert('Eksik bilgi'); let end=e; if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10);} let days=Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1; const rec={type,person,start:s,end:end,days}; if(type===OTHER_TYPE){ rec.points=Math.max(1,Math.min(5,Number($('#pointsInput').value||'1'))); rec.note=($('#noteInput').value||'').trim(); } state.records.push(rec); state.lastByType[type]=person; save(); render(); if(type===OTHER_TYPE){ $('#noteInput').value=''; } };
-  $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
-  $('#btnAddPerson').onclick=()=>{ const v=$('#newPerson').value.trim(); if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; save(); render(); } };
-  $('#btnAddType').onclick=()=>{ const v=$('#newType').value.trim(); if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; save(); render(); } };
-  $('#btnExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-takip.json'; a.click(); };
-  $('#btnImport').onclick=()=>$('#fileImport').click();
-  $('#fileImport').onchange=async(e)=>{ const f=e.target.files[0]; if(!f) return; try{ const t=await f.text(); const data=JSON.parse(t); if(!data.people||!data.types||!Array.isArray(data.records)) throw new Error('Şema hatalı'); state=data; save(); render(); }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
-  document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ render(); $('#btnSuggest').click(); });
-
-  // init
-    // load saved cloud settings
+    // init
   try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); if(c.url) $('#cloudUrl').value=c.url; if(c.token) $('#cloudToken').value=c.token; }catch{}
-  render();
-  initScorePicker();
+  (async()=>{ if(cloudEnabled()){ try{ await cloudPull(); toast('Buluttan çekildi',true);}catch(e){ /* sessiz */ } } render(); initScorePicker(); })();
 
   // --- Cloud sync (Google Apps Script) ---
   async function cloudPush(){
-    const url=$('#cloudUrl').value.trim(); if(!url) return alert('Bulut URL girin.');
+    const url=$('#cloudUrl').value.trim(); if(!url) throw new Error('Bulut URL yok');
     const payload={ token: $('#cloudToken').value||'', data: state };
     const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Hata'); alert('Buluta gönderildi.');
+    const j=await res.json().catch(()=>({ok:false,error:'parse'})); if(!res.ok||!j.ok) throw new Error(j.error||('HTTP '+res.status));
+    return true;
   }
   async function cloudPull(){
-    const url=$('#cloudUrl').value.trim(); if(!url) return alert('Bulut URL girin.');
+    const url=$('#cloudUrl').value.trim(); if(!url) throw new Error('Bulut URL yok');
     const token=$('#cloudToken').value||'';
     const res=await fetch(url+`?token=${encodeURIComponent(token)}`); const j=await res.json();
-    if(!res.ok||!j.ok) throw new Error(j.error||'Hata'); state=j.data; save(); render(); alert('Buluttan çekildi.');
+    if(!res.ok||!j.ok) throw new Error(j.error||'HTTP '+res.status);
+    state=j.data; save(); render(); return true;
   }
-  $('#btnCloudPush').onclick=()=>cloudPush().catch(e=>alert(e.message));
-  $('#btnCloudPull').onclick=()=>cloudPull().catch(e=>alert(e.message));
+  const cloudEnabled=()=>($('#cloudUrl')&&$('#cloudUrl').value.trim().length>0);
+  let pushDebounce=null; function schedulePush(reason=''){
+    if(!cloudEnabled()) return; if(pushDebounce) clearTimeout(pushDebounce);
+    pushDebounce=setTimeout(async()=>{ try{ await cloudPush(); toast(`Buluta eşitlendi${reason?' • '+reason:''}`,true);}catch(e){ toast('Senkron hatası: '+(e.message||e),false);} finally{ pushDebounce=null; } }, 500);
+  }
+  function toast(msg, ok=true){
+    const t=document.createElement('div'); t.className='toast '+(ok?'ok':'err'); t.textContent=msg; document.body.appendChild(t);
+    setTimeout(()=>{ t.remove(); }, 2200);
+  }
+  $('#btnCloudPush').onclick=()=>cloudPush().then(()=>toast('Buluta gönderildi',true)).catch(e=>toast(e.message,false));
+  $('#btnCloudPull').onclick=()=>cloudPull().then(()=>toast('Buluttan çekildi',true)).catch(e=>toast(e.message,false));
 
   /*  ==== Google Apps Script (sunucu kodu) örneği ====
   // 1) script.google.com > New project > Apps Script
@@ -278,14 +239,89 @@
   // (İsterseniz Script Properties > TOKEN=xxxxx koyabilirsiniz)
   */
 })();
-
-  if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js');
-  });
-}
 </script>
+  <script>
+    // --- PWA: Service Worker register + Install button ---
+    (function(){
+      if('serviceWorker' in navigator){
+        window.addEventListener('load', ()=>{
+          navigator.serviceWorker.register('./sw.js').catch(()=>{});
+        });
+      }
+      let deferredPrompt=null; const installBtn=document.createElement('button');
+      installBtn.textContent='Telefonuma Yükle'; installBtn.className='btn btn-prim';
+      installBtn.style.position='fixed'; installBtn.style.right='16px'; installBtn.style.bottom='16px'; installBtn.style.zIndex='9999'; installBtn.style.display='none';
+      document.body.appendChild(installBtn);
+      window.addEventListener('beforeinstallprompt', (e)=>{
+        e.preventDefault(); deferredPrompt=e; installBtn.style.display='block';
+      });
+      installBtn.addEventListener('click', async()=>{
+        if(!deferredPrompt) return; deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice; deferredPrompt=null; installBtn.style.display='none';
+      });
+    })();
+  </script>
 </body>
 </html>
 
+<!-- ============================
+     PWA DOSYALARI (aynı klasöre kaydet)
+     ============================ -->
 
+<!-- manifest.webmanifest -->
+<script type="application/json" id="__pwa_manifest">
+{
+  "name": "Görev Takibi",
+  "short_name": "GörevTakip",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
+</script>
+
+<!-- sw.js (Service Worker) -->
+<script type="text/plain" id="__pwa_sw">
+const CACHE_NAME = 'gorev-takip-v1';
+const ASSETS = [
+  './',
+  './index.html', // kendi dosya adını yaz: gorev_takip.html gibi
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
+self.addEventListener('install', e=>{
+  e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()));
+});
+self.addEventListener('activate', e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e=>{
+  e.respondWith(
+    caches.match(e.request).then(r=> r || fetch(e.request).then(res=>{
+      const copy = res.clone();
+      caches.open(CACHE_NAME).then(c=>{ if(e.request.method==='GET' && res.ok) c.put(e.request, copy); });
+      return res;
+    }).catch(()=> caches.match('./')))
+  );
+});
+</script>
+
+<!-- Hızlı kurulum notu:
+1) Bu HTML dosyasının adını örn. index.html yapın.
+2) Aynı klasöre iki dosya oluşturun: manifest.webmanifest ve sw.js
+   - Yukarıdaki <script id="__pwa_manifest"> içeriğini manifest.webmanifest olarak kaydedin.
+   - Yukarıdaki <script id="__pwa_sw"> içeriğini sw.js olarak kaydedin.
+   - icons/ klasörü açıp 192 ve 512 px PNG ikonları koyun (geçici olarak aynı resmi iki boyutta kullanabilirsiniz).
+3) Dosyaları bir http sunucusundan servis edin:
+   - IIS/Apache/Nginx veya GitHub Pages/Netlify.
+   - (Dosyaları sadece dosya:// ile açarsanız service worker çalışmaz.)
+4) Telefon tarayıcısından siteyi ziyaret edin, ekranda çıkan “Telefonuma Yükle” düğmesi veya tarayıcı menüsündeki “Ana ekrana ekle” ile kurulumu yapın.
+5) iOS: Safari’de paylaş menüsü → Ana Ekrana Ekle.
+-->
