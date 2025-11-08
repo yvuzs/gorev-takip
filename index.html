@@ -2,44 +2,59 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Görev Takibi (PWA + Otomatik Senkron)</title>
+
+<!-- PWA -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1220">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+<!-- no-cache (geliştirme akıcı olsun) -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
 <style>
   :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:#e5e7eb}
-  .wrap{max-width:1200px;margin:auto;padding:24px}
-  h1{margin:0 0 10px;font-weight:800;font-size:22px;text-align:center}
+
+  /* App shell */
+  .appbar{
+    position:sticky; top:0; z-index:20;
+    padding: calc(env(safe-area-inset-top) + 10px) 16px 12px;
+    background:rgba(8,12,20,.8); backdrop-filter: saturate(120%) blur(6px);
+    border-bottom:1px solid #1f2937;
+  }
+  .appbar h1{margin:0; font-size:18px; letter-spacing:.2px; font-weight:800; text-align:center}
+  .wrap{max-width:1200px;margin:auto;padding:16px 16px 80px} /* altta bottom bar için boşluk */
+
+  h2{margin: 6px 0 12px;}
   .grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
   .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
   label{display:block;margin:10px 0 6px;color:#cbd5e1;font-weight:600}
-  input[type=text],input[type=date],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
+  input[type=text],input[type=date],select{width:100%;padding:12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
   textarea{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
   .row{display:flex;gap:8px;align-items:center}
   .row>*{flex:1}
-  .btn{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
-  .btn.small{padding:4px 8px;font-size:12px;border-radius:8px}
-  .btn:hover{filter:brightness(1.15)}
+  .btn{padding:12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
+  .btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
+  .btn:hover{filter:brightness(1.12)}
   .btn-prim{background:linear-gradient(135deg,var(--accent2),#06b6d4);border:0;color:white}
   .btn-good{background:linear-gradient(135deg,var(--accent),#16a34a);border:0;color:white}
   .btn-danger{background:linear-gradient(135deg,#ef4444,#f97316);border:0;color:white}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;background:var(--chip);border:1px solid #334155}
   .muted{color:var(--muted)}
   table{width:100%;border-collapse:collapse;text-align:center}
-  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:center;vertical-align:middle}
-  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;vertical-align:middle;text-align:center}
+  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   tbody tr:hover{background:#0b1220}
-  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block;text-align:center}
-  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block;text-align:center}
+  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block}
+  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block}
   .stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
   .small{font-size:12px}
   .right{display:flex;gap:8px;justify-content:flex-end}
@@ -50,19 +65,33 @@
   .score-box:hover{opacity:1;transform:translateY(-1px)}
   .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
   .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
+
+  /* Bottom action bar (sadece mobilde görünür) */
+  .bottombar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+    background:rgba(8,12,20,.95); backdrop-filter: saturate(120%) blur(6px);
+    border-top:1px solid #1f2937;
+    display:none; gap:8px;
+  }
+  .bottombar .btn{flex:1; font-size:15px; padding:14px; border-radius:12px}
+
   @media (max-width: 900px){
     .grid{grid-template-columns:1fr}
-    .wrap{padding:16px}
+    .wrap{padding:12px 12px 90px}
     .card{padding:14px}
-    h1{font-size:20px}
-    .btn{padding:12px 14px}
-    table{font-size:13px}
+    th,td{padding:10px 8px}
+    .bottombar{display:flex}
+    /* formdaki ana iki butonu mobilde gizle, alttaki barı kullan */
+    #btnSuggest, #btnAdd { display:none; }
   }
 </style>
 </head>
 <body>
+  <!-- APP BAR (sadece üst başlık) -->
+  <div class="appbar"><h1>Görev Takibi</h1></div>
+
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted"></span></h1>
     <div class="grid">
       <div class="card">
         <h2>Yeni Kayıt</h2>
@@ -148,6 +177,12 @@
     </div>
   </div>
 
+  <!-- BOTTOM ACTION BAR (mobil) -->
+  <div class="bottombar">
+    <button class="btn btn-good" id="mobileSuggest">Sıradaki Öner</button>
+    <button class="btn btn-prim" id="mobileAdd">Kaydı Ekle</button>
+  </div>
+
 <script>
 (function(){
   /* ===== Helpers & IDs ===== */
@@ -158,7 +193,7 @@
   const today=()=>new Date().toISOString().slice(0,10);
   const DEFAULT_WORKER='https://blue-violet-32c9.retkitselim.workers.dev/';
 
-  // Benzersiz istemci kimliği
+  // client id
   function ensureClientId(){
     let id=localStorage.getItem(LS_KEY+'__clientId');
     if(!id){ id='c-'+Math.random().toString(36).slice(2)+Date.now(); localStorage.setItem(LS_KEY+'__clientId',id); }
@@ -177,7 +212,7 @@
     state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
   }
   const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
-  function bumpMeta(){ state.__meta={updatedAt:Date.now(), clientId:CLIENT_ID}; }
+  const bumpMeta=()=>{ state.__meta={updatedAt:Date.now(),clientId:CLIENT_ID}; };
 
   function weightOfRecord(r){
     if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
@@ -237,7 +272,6 @@
   /* ===== Render ===== */
   function render(){
     localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||''}));
-
     $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
     $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
     if(!$('#startDate').value) $('#startDate').value=today();
@@ -247,18 +281,19 @@
     const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
     const siraCells=types.map(t=>`<td><span class="pill">${suggest(t)||'-'}</span></td>`).join('');
     const siraRow=`<tr><td class="muted small">Sıra</td>${siraCells}<td></td></tr>`;
+
+    /* toplam azdan çoğa sıralama */
     const rows = state.people
-  .map(p => {
-    const cells = types.map(t => countsBy(t).get(p) || 0);
-    const tot = cells.reduce((a, b) => a + b, 0);
-    return { p, cells, tot };
-  })
-  // toplam az olan yukarı, çok olan aşağı
-  .sort((a, b) => a.tot - b.tot)
-  .map(obj =>
-    `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`
-  )
-  .join('');
+      .map(p => {
+        const cells = types.map(t => countsBy(t).get(p) || 0);
+        const tot = cells.reduce((a, b) => a + b, 0);
+        return { p, cells, tot };
+      })
+      .sort((a, b) => a.tot - b.tot)
+      .map(obj =>
+        `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`
+      )
+      .join('');
 
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
 
@@ -303,8 +338,13 @@
   /* ===== Actions ===== */
   $('#taskType').onchange=()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
   $('#btnSuggest').onclick=()=>{ const t=$('#taskType').value; const p=suggest(t); $('#suggestHint').textContent=p?`(öneri: ${p})`:''; if(p) $('#personSelect').value=p; };
+  $('#btnAdd').onclick=addRecord;
 
-  $('#btnAdd').onclick=()=>{
+  // Bottom bar butonları aynı işlevleri tetikler
+  $('#mobileSuggest').onclick=()=>$('#btnSuggest').click();
+  $('#mobileAdd').onclick=()=>$('#btnAdd').click();
+
+  function addRecord(){
     const type=$('#taskType').value, person=$('#personSelect').value;
     const s=$('#startDate').value, e=$('#endDate').value;
     if(!type||!person||!s) return alert('Eksik bilgi');
@@ -320,17 +360,15 @@
     state.records.push(rec);
     state.lastByType[type]=person;
     bumpMeta(); save(); render(); schedulePush();
-  };
+  }
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
-
   $('#btnAddPerson').onclick=()=>{ const v=$('#newPerson').value.trim();
     if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; bumpMeta(); save(); render(); schedulePush(); }
   };
   $('#btnAddType').onclick=()=>{ const v=$('#newType').value.trim();
     if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; bumpMeta(); save(); render(); schedulePush(); }
   };
-
   $('#btnExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-takip.json'; a.click(); };
   $('#btnImport').onclick=()=>$('#fileImport').click();
   $('#fileImport').onchange=async(e)=>{ const f=e.target.files[0]; if(!f) return; try{
@@ -352,99 +390,56 @@
   function schedulePush(){
     if(pushDebounce) clearTimeout(pushDebounce);
     pushDebounce=setTimeout(async()=>{
-      try{ await cloudPush(); /* sessiz */ }
-      catch(e){ console.warn('Senkron hatası:', e); }
+      try{ await cloudPush(); }catch(e){ console.warn('Senkron hatası:', e); }
       finally{ pushDebounce=null; }
     }, 600);
   }
-
   async function cloudPush(){
     const url=$('#cloudUrl').value.trim(); if(!url) return;
-    const res=await fetch(url,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ data: state })
-    });
-    const j=await res.json();
-    if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
+    const res=await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ data: state }) });
+    const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
     return true;
   }
-
   async function cloudPull(){
     if(pulling) return; pulling=true;
     try{
       const url=$('#cloudUrl').value.trim(); if(!url) return;
-      const res=await fetch(url,{cache:'no-store'});
-      const j=await res.json();
-      if(!res.ok || !j || !j.ok){ return; }
-
-      const cloud=j.data||{};
-      const cloudSha=j.sha||null;
-
-      // Sürüm karşılaştırma: meta yoksa bulutu kabul et
-      const localMeta=state.__meta||{updatedAt:0};
-      const cloudMeta=cloud.__meta||{updatedAt:0};
-
-      // Sha değişmişse ve bulut daha yeniyse -> yereli bulutla değiştir
+      const res=await fetch(url,{cache:'no-store'}); const j=await res.json();
+      if(!res.ok||!j||!j.ok) return;
+      const cloud=j.data||{}, cloudSha=j.sha||null;
+      const localMeta=state.__meta||{updatedAt:0}, cloudMeta=cloud.__meta||{updatedAt:0};
       if(cloudSha!==lastSeenSha && (cloudMeta.updatedAt>localMeta.updatedAt)){
         state=cloud; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
         save(); render();
       }
-      lastSeenSha = cloudSha;
-    }catch(e){
-      // sessiz
-    }finally{ pulling=false; }
+      lastSeenSha=cloudSha;
+    }catch(e){} finally{ pulling=false; }
   }
-
-  // Başlangıçta hemen bir pull
-  cloudPull();
-
-  // Periyodik pull (10 sn)
-  setInterval(cloudPull, 10000);
-
-  // Sekme odaklanınca ve çevrimiçi olunca anında pull
+  cloudPull(); setInterval(cloudPull,10000);
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') cloudPull(); });
   window.addEventListener('online', cloudPull);
-
-  // URL değişirse kaydet ve hemen çek
   $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
 
-  // SW kaydı
- if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-
-      // Yeni SW bulunduğunda hemen aktif et
-      reg.addEventListener('updatefound', () => {
-        const sw = reg.installing;
-        if (!sw) return;
-        sw.addEventListener('statechange', () => {
-          if (sw.state === 'installed' && reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
+  /* ===== Service Worker: network-first HTML + auto reload ===== */
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          });
         });
-      });
-
-      // Kontrolcü değişirse (yeni SW kontrolü aldı) sayfayı yenile
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // sonsuz döngüyü önlemek için tek seferlik reload
-        if (!window.__reloadedBySW) {
-          window.__reloadedBySW = true;
-          location.reload();
-        }
-      });
-
-      // Manuel tetik: SW güncellemesini kontrol et (her yüklemede)
-      reg.update().catch(()=>{});
-    } catch (e) {
-      console.warn('SW kayıt hatası:', e);
-    }
-  });
-}
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!window.__reloadedBySW) { window.__reloadedBySW = true; location.reload(); }
+        });
+        reg.update().catch(()=>{});
+      } catch (e) { console.warn('SW kayıt hatası:', e); }
+    });
+  }
 })();
 </script>
 </body>
 </html>
-
-
