@@ -1,46 +1,51 @@
-// sw.js (minimal ve güvenli)
-const CACHE = 'gt-v1';
+// sw.js - basit PWA önbellekleme + çevrimdışı fallback
+const CACHE = "gorev-takip-v4";
 const ASSETS = [
-  './', './index.html', './manifest.webmanifest',
-  './styles.css', './app.js', // varsa
+  "./",
+  "./index.html",
+  "./manifest.webmanifest",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/maskable-192.png",
+  "./icons/maskable-512.png"
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
+// Kurulum: temel dosyaları al
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
 });
 
-self.addEventListener('activate', e => {
+// Eski cache'leri temizle
+self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
+// İstek yakalama: öncelik ağ (GitHub/Worker güncel kalsın), düşerse cache
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
 
-  // 1) Chrome extension, data:, chrome-extension: vs. asla dokunma
-  if (url.protocol === 'chrome-extension:' || url.protocol === 'chrome:'
-      || url.protocol === 'data:') return;
+  // Yalnız GET taleplerini cache'le
+  if (req.method !== "GET") return;
 
-  // 2) Sadece aynı origin (github.io’daki kendi dosyaların) için cache-strategy
-  if (url.origin === self.location.origin) {
-    e.respondWith(
-      caches.match(e.request).then(res =>
-        res || fetch(e.request).then(r => {
-          const copy = r.clone();
-          caches.open(CACHE).then(c => c.put(e.request, copy));
-          return r;
-        })
-      )
-    );
-    return;
-  }
-
-  // 3) Cross-origin (örn: https://script.google.com) → doğrudan network
-  //    (CORS/credentiallar Apps Script’in verdiği gibi kalsın)
-  e.respondWith(fetch(e.request));
+  e.respondWith(
+    fetch(req).then((res) => {
+      // Başarılı cevapları sessizce cache'e koy
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(req, clone)).catch(()=>{});
+      return res;
+    }).catch(async () => {
+      // Ağ yoksa cache'den ver veya basit bir fallback
+      const cached = await caches.match(req, { ignoreSearch: true });
+      return cached || new Response(
+        "<h1>Çevrimdışı</h1><p>Bağlantı yokken sınırlı görünüm.</p>",
+        { headers: { "Content-Type": "text/html; charset=utf-8" } }
+      );
+    })
+  );
 });
