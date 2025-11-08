@@ -1,1 +1,1 @@
-{ "people": [], "types": [], "records": [], "lastByType": {} }
+{"people":[{"id":"u-1","name":"Yavuz Selim","role":"admin"}],"types":[{"id":"t-1","key":"test","title":"Test Tipi"}],"records":[{"id":"r-1","title":"İlk Worker Test Görevi","typeId":"t-1","ownerId":"u-1","status":"open","createdAt":"2025-11-08T21:26:47.565Z","updatedAt":"2025-11-08T21:26:47.565Z","notes":"Cloudflare Worker üzerinden gönderildi"}],"lastByType":{"t-1":"2025-11-08T21:26:47.565Z"}}
