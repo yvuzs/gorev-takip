@@ -85,6 +85,53 @@
     /* formdaki ana iki butonu mobilde gizle, alttaki barı kullan */
     #btnSuggest, #btnAdd { display:none; }
   }
+
+/* Varsayılan: tarayıcıda app bar + bottom bar gizli kalsın */
+.appbar { display: none; }
+.bottombar { display: none; }
+
+/* Kurulu PWA (standalone) modunda app görünümü aç */
+@media (display-mode: standalone) {
+  .appbar { 
+    display:block;
+    position:sticky; top:0; z-index:20;
+    padding: calc(env(safe-area-inset-top) + 10px) 16px 12px;
+    background: rgba(8,12,20,.85);
+    backdrop-filter: blur(6px) saturate(120%);
+    border-bottom: 1px solid #1f2937;
+  }
+  .bottombar {
+    display:flex;
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+    background: rgba(8,12,20,.95);
+    backdrop-filter: blur(6px) saturate(120%);
+    border-top:1px solid #1f2937;
+    gap:8px;
+  }
+  .bottombar .btn { flex:1; font-size:15px; padding:14px; border-radius:12px; }
+
+  /* PWA’da mobil odaklı tek sütun ve altta boşluk */
+  .wrap { padding-bottom: 90px; }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    /* Formdaki üst butonlar PWA’da gizli; alttaki bar kullanılacak */
+    #btnSuggest, #btnAdd { display:none; }
+  }
+}
+
+/* Eski Safari/Chrome için JS fallback sınıfı (aşağıda eklenecek) */
+html.is-standalone .appbar { display:block; }
+html.is-standalone .bottombar { display:flex; }
+html.is-standalone .wrap { padding-bottom: 90px; }
+@media (max-width: 900px) {
+  html.is-standalone .grid { grid-template-columns: 1fr; }
+  html.is-standalone #btnSuggest,
+  html.is-standalone #btnAdd { display:none; }
+}
+
+
+  
 </style>
 </head>
 <body>
@@ -441,5 +488,18 @@
   }
 })();
 </script>
+  <script>
+  // iOS Safari ve bazı eski Android sürümleri için standalone tespiti fallback
+  (function () {
+    var isStandalone =
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      (typeof window.navigator.standalone !== 'undefined' && window.navigator.standalone === true);
+
+    if (isStandalone) {
+      document.documentElement.classList.add('is-standalone');
+    }
+  })();
+</script>
 </body>
 </html>
+
