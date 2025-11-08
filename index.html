@@ -9,6 +9,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
 <style>
   :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
   *{box-sizing:border-box}
@@ -406,11 +410,41 @@
   $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
 
   // SW kaydı
-  if('serviceWorker' in navigator){
-    window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
-  }
+ if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+
+      // Yeni SW bulunduğunda hemen aktif et
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      // Kontrolcü değişirse (yeni SW kontrolü aldı) sayfayı yenile
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // sonsuz döngüyü önlemek için tek seferlik reload
+        if (!window.__reloadedBySW) {
+          window.__reloadedBySW = true;
+          location.reload();
+        }
+      });
+
+      // Manuel tetik: SW güncellemesini kontrol et (her yüklemede)
+      reg.update().catch(()=>{});
+    } catch (e) {
+      console.warn('SW kayıt hatası:', e);
+    }
+  });
+}
 })();
 </script>
 </body>
 </html>
+
 
