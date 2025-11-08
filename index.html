@@ -58,7 +58,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted">(Otomatik Bulut Senkron)</span></h1>
+    <h1>Görev Takibi <span class="muted"></span></h1>
     <div class="grid">
       <div class="card">
         <h2>Yeni Kayıt</h2>
@@ -243,11 +243,19 @@
     const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
     const siraCells=types.map(t=>`<td><span class="pill">${suggest(t)||'-'}</span></td>`).join('');
     const siraRow=`<tr><td class="muted small">Sıra</td>${siraCells}<td></td></tr>`;
-    const rows=state.people.map(p=>{
-      const cells=types.map(t=>countsBy(t).get(p)||0);
-      const tot=cells.reduce((a,b)=>a+b,0);
-      return `<tr><td><span class="kbadge">${p}</span></td>${cells.map(c=>`<td>${c}</td>`).join('')}<td><b>${tot}</b></td></tr>`;
-    }).join('');
+    const rows = state.people
+  .map(p => {
+    const cells = types.map(t => countsBy(t).get(p) || 0);
+    const tot = cells.reduce((a, b) => a + b, 0);
+    return { p, cells, tot };
+  })
+  // toplam az olan yukarı, çok olan aşağı
+  .sort((a, b) => a.tot - b.tot)
+  .map(obj =>
+    `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`
+  )
+  .join('');
+
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
 
     const pc=$('#peopleChips'); pc.innerHTML='';
@@ -405,3 +413,4 @@
 </script>
 </body>
 </html>
+
