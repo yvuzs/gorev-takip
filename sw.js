@@ -60,24 +60,18 @@ self.addEventListener('fetch', e => {
   );
 });
 
+// sw.js
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1) Chrome eklenti istekleriyle asla uğraşma
-  if (url.protocol === 'chrome-extension:') return;
-
-  // 2) Apps Script / diğer harici isteklerde asla cache'e sokma, direkt geçir
-  if (url.hostname.endsWith('script.google.com') ||
-      url.hostname.endsWith('script.googleusercontent.com')) {
-    event.respondWith(fetch(event.request));
-    return;
+  // Sadece aynı origin'i yönet; dış origin'i tamamen bırak
+  if (url.origin !== self.location.origin) {
+    return; // respondWith ÇAĞIRMA -> tarayıcı doğrudan işleyecek
   }
 
-  // 3) Kalanları (aynı origin) istersen cache-first ya da network-first ele al
-  // Basit network-first:
+  // Basit network-first örneği (istersen değiştirebilirsin)
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
 });
-
 
