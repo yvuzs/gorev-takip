@@ -335,7 +335,7 @@
 
   render(); initScorePicker();
 
-  /* ===== Bulut Senkron (Apps Script, preflight’sız) ===== */
+  /* ===== Bulut Senkron (Apps Script, güvenli çekme) ===== */
   let pushDebounce=null;
   function schedulePush(reason=''){
     if(pushDebounce) clearTimeout(pushDebounce);
@@ -357,22 +357,59 @@
     const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
     return true;
   }
-  async function cloudPull(){
-    const url=$('#cloudUrl').value.trim(); if(!url) return;
+
+  // ---- GÜVENLİ BULUTTAN ÇEK ----
+  async function pullFromCloudSafe(){
+    const url=$('#cloudUrl').value.trim();
     const token=$('#cloudToken').value||'';
-    const res=await fetch(url+`?token=${encodeURIComponent(token)}`);
-    const j=await res.json();
-    if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
-    state=j.data; save(); render();
-    return true;
+    if(!url){ alert('Bulut URL boş.'); return; }
+
+    try{
+      const res = await fetch(url+`?token=${encodeURIComponent(token)}`, { cache:'no-store' });
+      const j = await res.json();
+
+      if(!res.ok || !j || !j.ok){ alert('Buluttan okuma başarısız.'); return; }
+
+      const cloud = j.data || {};
+      const local = JSON.parse(localStorage.getItem(LS_KEY) || '{"people":[],"types":[],"records":[],"lastByType":{}}');
+
+      const cloudEmpty = !(cloud.records?.length || cloud.people?.length || cloud.types?.length);
+      const localHas  =   (local.records?.length || local.people?.length || local.types?.length);
+
+      if (cloudEmpty && localHas) {
+        const go = confirm('⚠️ Buluttaki veri boş görünüyor. Yerelde veri var. Yereldekini buluta göndermek ister misiniz?');
+        if (!go) return;
+
+        const resUp = await fetch(url,{
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=UTF-8'},
+          body:JSON.stringify({ data: local, token })
+        });
+        const up = await resUp.json();
+        if(up && up.ok){
+          alert('✅ Yerel veri buluta gönderildi.');
+        }else{
+          alert('Buluta gönderme başarısız.');
+        }
+        return;
+      }
+
+      // Bulut dolu → yereli bulutla değiştir
+      localStorage.setItem(LS_KEY, JSON.stringify(cloud));
+      state = cloud;
+      save(); render();
+      alert('✅ Buluttan çekildi.');
+    }catch(e){
+      console.error(e);
+      alert('Buluttan okuma sırasında hata oluştu.');
+    }
   }
+
+  // Butonlar
   $('#btnCloudPush').onclick=()=>cloudPush().then(()=>alert('Buluta gönderildi.')).catch(e=>alert(e.message));
-  $('#btnCloudPull').onclick=()=>cloudPull().then(()=>alert('Buluttan çekildi.')).catch(e=>alert(e.message));
+  $('#btnCloudPull').onclick=()=>pullFromCloudSafe();
 
-  // Sayfa açılışında otomatik buluttan çek (URL girilmişse)
-  (async()=>{ try{ await cloudPull(); }catch(_){ /* sessiz */ } })();
-
-  // SW kaydı sende; yalnız index tarafında da şu şekilde kalabilir:
+  // SW kaydı
   if('serviceWorker' in navigator){
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
   }
