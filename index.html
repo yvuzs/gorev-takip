@@ -36,7 +36,6 @@
   .right{display:flex;gap:8px;justify-content:flex-end}
   details{border:1px dashed #334155;border-radius:12px;padding:10px}
   summary{cursor:pointer;color:#93c5fd}
-  /* Puan seçici */
   .score-picker{display:flex;gap:6px;justify-content:center;margin-top:6px}
   .score-box{width:40px;height:24px;border-radius:6px;border:1px solid #444;cursor:pointer;opacity:.85;transition:transform .12s, opacity .12s, box-shadow .12s}
   .score-box:hover{opacity:1;transform:translateY(-1px)}
@@ -54,7 +53,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted">(localStorage ile)</span></h1>
+    <h1>Görev Takibi <span class="muted">(localStorage + Cloudflare Worker)</span></h1>
     <div class="grid">
       <div class="card">
         <h2>Yeni Kayıt</h2>
@@ -116,12 +115,11 @@
           <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="btnAddType">Ekle</button></div>
         </details>
 
-        <details>
+        <details open>
           <summary>Bulut Eşitleme</summary>
-          <label>Bulut API URL (Apps Script Web App)</label>
-          <input id="cloudUrl" type="text" placeholder="https://script.google.com/.../exec" />
+          <label>Cloudflare Worker URL</label>
+          <input id="cloudUrl" type="text" placeholder="https://<worker-adresin>.workers.dev/"/>
           <div class="row">
-            <input id="cloudToken" type="text" placeholder="Gizli anahtar (opsiyonel)" />
             <button class="btn" id="btnCloudPull">Buluttan Çek</button>
             <button class="btn" id="btnCloudPush">Buluta Gönder</button>
           </div>
@@ -152,6 +150,7 @@
   const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
   const $=s=>document.querySelector(s);
   const today=()=>new Date().toISOString().slice(0,10);
+  const DEFAULT_WORKER = 'https://blue-violet-32c9.retkitselim.workers.dev/'; // İstersen değiştir
 
   let state; try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
   if(!state){
@@ -232,8 +231,8 @@
 
   /* ===== Render ===== */
   function render(){
-    // persist cloud settings
-    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||'', token: $('#cloudToken')?.value||''}));
+    // persist cloud settings (sadece URL)
+    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||''}));
 
     $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
     $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
@@ -330,12 +329,17 @@
   }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
   document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ render(); $('#btnSuggest').click(); });
 
-  // cloud settings restore
-  try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); if(c.url) $('#cloudUrl').value=c.url; if(c.token) $('#cloudToken').value=c.token; }catch{}
+  // cloud settings restore (sadece URL)
+  try{
+    const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}');
+    $('#cloudUrl').value = c.url || DEFAULT_WORKER;
+  }catch{
+    $('#cloudUrl').value = DEFAULT_WORKER;
+  }
 
   render(); initScorePicker();
 
-  /* ===== Bulut Senkron (Apps Script, güvenli çekme) ===== */
+  /* ===== Bulut Senkron (Cloudflare Worker) ===== */
   let pushDebounce=null;
   function schedulePush(reason=''){
     if(pushDebounce) clearTimeout(pushDebounce);
@@ -348,24 +352,21 @@
 
   async function cloudPush(){
     const url=$('#cloudUrl').value.trim(); if(!url) return;
-    const payload={ token: $('#cloudToken').value||'', data: state };
     const res=await fetch(url,{
       method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'}, // preflight yok
-      body:JSON.stringify(payload)
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ data: state })
     });
     const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
     return true;
   }
 
-  // ---- GÜVENLİ BULUTTAN ÇEK ----
   async function pullFromCloudSafe(){
     const url=$('#cloudUrl').value.trim();
-    const token=$('#cloudToken').value||'';
     if(!url){ alert('Bulut URL boş.'); return; }
 
     try{
-      const res = await fetch(url+`?token=${encodeURIComponent(token)}`, { cache:'no-store' });
+      const res = await fetch(url, { cache:'no-store' });
       const j = await res.json();
 
       if(!res.ok || !j || !j.ok){ alert('Buluttan okuma başarısız.'); return; }
@@ -382,8 +383,8 @@
 
         const resUp = await fetch(url,{
           method:'POST',
-          headers:{'Content-Type':'text/plain;charset=UTF-8'},
-          body:JSON.stringify({ data: local, token })
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ data: local })
         });
         const up = await resUp.json();
         if(up && up.ok){
@@ -409,7 +410,7 @@
   $('#btnCloudPush').onclick=()=>cloudPush().then(()=>alert('Buluta gönderildi.')).catch(e=>alert(e.message));
   $('#btnCloudPull').onclick=()=>pullFromCloudSafe();
 
-  // SW kaydı
+  // SW kaydı (isteğe bağlı)
   if('serviceWorker' in navigator){
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
   }
