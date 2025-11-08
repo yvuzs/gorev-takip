@@ -3,14 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="manifest" href="manifest.webmanifest">
+<title>Görev Takibi (PWA + Otomatik Senkron)</title>
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b1220">
-
-<!-- iOS özel -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Görev Takibi (Veritabanısız)</title>
 <style>
   :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
   *{box-sizing:border-box}
@@ -60,7 +58,7 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted">(localStorage + Cloudflare Worker)</span></h1>
+    <h1>Görev Takibi <span class="muted">(Otomatik Bulut Senkron)</span></h1>
     <div class="grid">
       <div class="card">
         <h2>Yeni Kayıt</h2>
@@ -123,13 +121,10 @@
         </details>
 
         <details open>
-          <summary>Bulut Eşitleme</summary>
+          <summary>Bulut Ayarı</summary>
           <label>Cloudflare Worker URL</label>
           <input id="cloudUrl" type="text" placeholder="https://<worker-adresin>.workers.dev/"/>
-          <div class="row">
-            <button class="btn" id="btnCloudPull">Buluttan Çek</button>
-            <button class="btn" id="btnCloudPush">Buluta Gönder</button>
-          </div>
+          <p class="muted small">Değişiklikler otomatik olarak buluta gönderilir ve arka planda çekilir.</p>
         </details>
 
         <div class="row">
@@ -151,24 +146,34 @@
 
 <script>
 (function(){
-  /* ===== State & helpers ===== */
+  /* ===== Helpers & IDs ===== */
   const LS_KEY='gorevTakip_v9';
   const OTHER_TYPE='DIGER';
   const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
   const $=s=>document.querySelector(s);
   const today=()=>new Date().toISOString().slice(0,10);
-  const DEFAULT_WORKER = 'https://blue-violet-32c9.retkitselim.workers.dev/'; // İstersen değiştir
+  const DEFAULT_WORKER='https://blue-violet-32c9.retkitselim.workers.dev/';
 
-  let state; try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
+  // Benzersiz istemci kimliği
+  function ensureClientId(){
+    let id=localStorage.getItem(LS_KEY+'__clientId');
+    if(!id){ id='c-'+Math.random().toString(36).slice(2)+Date.now(); localStorage.setItem(LS_KEY+'__clientId',id); }
+    return id;
+  }
+  const CLIENT_ID=ensureClientId();
+
+  /* ===== State ===== */
+  let state;
+  try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
   if(!state){
-    state={
-      people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK"],
-      types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
-      records:[],
-      lastByType:{}
-    };
+    state={ people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK"],
+            types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
+            records:[], lastByType:{}, __meta:{updatedAt:Date.now(), clientId:CLIENT_ID} };
+  } else {
+    state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
   }
   const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
+  function bumpMeta(){ state.__meta={updatedAt:Date.now(), clientId:CLIENT_ID}; }
 
   function weightOfRecord(r){
     if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
@@ -177,21 +182,12 @@
   }
   function countsBy(type){
     const m=new Map(state.people.map(p=>[p,0]));
-    state.records.forEach(r=>{
-      if(!type || r.type===type){
-        m.set(r.person,(m.get(r.person)||0)+weightOfRecord(r));
-      }
-    });
+    state.records.forEach(r=>{ if(!type||r.type===type){ m.set(r.person,(m.get(r.person)||0)+weightOfRecord(r)); }});
     return m;
   }
   function lastTimeBy(type){
     const m=new Map(state.people.map(p=>[p,0]));
-    state.records.forEach(r=>{
-      if(!type || r.type===type){
-        const t=new Date(r.start).getTime();
-        if(t>m.get(r.person)) m.set(r.person,t);
-      }
-    });
+    state.records.forEach(r=>{ if(!type||r.type===type){ const t=new Date(r.start).getTime(); if(t>m.get(r.person)) m.set(r.person,t); }});
     return m;
   }
   function nextRR(type){
@@ -222,15 +218,13 @@
     $('#otherWrap').style.display= show? 'block':'none';
   }
   function initScorePicker(){
-    const boxes = document.querySelectorAll('#scorePicker .score-box');
-    const hidden = $('#pointsInput');
-    const label  = $('#scoreLabel');
+    const boxes=document.querySelectorAll('#scorePicker .score-box');
+    const hidden=$('#pointsInput'), label=$('#scoreLabel');
     boxes.forEach(b=>{
       b.onclick=()=>{
         boxes.forEach(x=>x.classList.remove('active'));
         b.classList.add('active');
-        hidden.value = b.dataset.val;
-        label.textContent = 'Seçili: '+hidden.value;
+        hidden.value=b.dataset.val; label.textContent='Seçili: '+hidden.value;
       };
     });
     (boxes[0]||{}).click?.();
@@ -238,7 +232,6 @@
 
   /* ===== Render ===== */
   function render(){
-    // persist cloud settings (sadece URL)
     localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||''}));
 
     $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
@@ -257,14 +250,13 @@
     }).join('');
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
 
-    // chips
     const pc=$('#peopleChips'); pc.innerHTML='';
     state.people.forEach(p=>{
       const w=document.createElement('span'); w.className='chip';
       w.innerHTML=`<span>${p}</span>`;
       const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
       d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
-        state.people=state.people.filter(x=>x!==p); save(); render(); schedulePush('personel sil');
+        state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); render(); schedulePush();
       };
       w.appendChild(d); pc.appendChild(w);
     });
@@ -276,7 +268,7 @@
       const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
       d.onclick=()=>{ if(state.types.length<=1) return alert('En az bir tür kalmalı.');
         if(!confirm(`${t} silinsin mi?`)) return;
-        state.types=state.types.filter(x=>x!==t); save(); render(); schedulePush('tür sil');
+        state.types=state.types.filter(x=>x!==t); bumpMeta(); save(); render(); schedulePush();
       };
       w.appendChild(d); tc.appendChild(w);
     });
@@ -292,7 +284,7 @@
       }).join('')+'</tbody>';
     log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
       const idx=+b.getAttribute('data-del');
-      state.records.splice(idx,1); save(); render(); schedulePush('silme');
+      state.records.splice(idx,1); bumpMeta(); save(); render(); schedulePush();
     });
   }
 
@@ -315,16 +307,16 @@
     }
     state.records.push(rec);
     state.lastByType[type]=person;
-    save(); render(); schedulePush('ekleme');
+    bumpMeta(); save(); render(); schedulePush();
   };
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
 
   $('#btnAddPerson').onclick=()=>{ const v=$('#newPerson').value.trim();
-    if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; save(); render(); schedulePush('personel'); }
+    if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; bumpMeta(); save(); render(); schedulePush(); }
   };
   $('#btnAddType').onclick=()=>{ const v=$('#newType').value.trim();
-    if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; save(); render(); schedulePush('tür'); }
+    if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; bumpMeta(); save(); render(); schedulePush(); }
   };
 
   $('#btnExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-takip.json'; a.click(); };
@@ -332,26 +324,23 @@
   $('#fileImport').onchange=async(e)=>{ const f=e.target.files[0]; if(!f) return; try{
     const t=await f.text(); const data=JSON.parse(t);
     if(!data.people||!data.types||!Array.isArray(data.records)) throw new Error('Şema hatalı');
-    state=data; save(); render(); schedulePush('içe aktarım');
+    state=data; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
+    save(); render(); schedulePush();
   }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
   document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ render(); $('#btnSuggest').click(); });
 
-  // cloud settings restore (sadece URL)
-  try{
-    const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}');
-    $('#cloudUrl').value = c.url || DEFAULT_WORKER;
-  }catch{
-    $('#cloudUrl').value = DEFAULT_WORKER;
-  }
+  // Bulut URL yükle
+  try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); $('#cloudUrl').value=c.url||DEFAULT_WORKER; }catch{ $('#cloudUrl').value=DEFAULT_WORKER; }
 
   render(); initScorePicker();
 
-  /* ===== Bulut Senkron (Cloudflare Worker) ===== */
-  let pushDebounce=null;
-  function schedulePush(reason=''){
+  /* ===== Otomatik Bulut Senkron ===== */
+  let pushDebounce=null, pulling=false, lastSeenSha=null;
+
+  function schedulePush(){
     if(pushDebounce) clearTimeout(pushDebounce);
     pushDebounce=setTimeout(async()=>{
-      try{ await cloudPush(); console.log('Buluta eşitlendi', reason); }
+      try{ await cloudPush(); /* sessiz */ }
       catch(e){ console.warn('Senkron hatası:', e); }
       finally{ pushDebounce=null; }
     }, 600);
@@ -364,60 +353,51 @@
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ data: state })
     });
-    const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Hata');
+    const j=await res.json();
+    if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
     return true;
   }
 
-  async function pullFromCloudSafe(){
-    const url=$('#cloudUrl').value.trim();
-    if(!url){ alert('Bulut URL boş.'); return; }
-
+  async function cloudPull(){
+    if(pulling) return; pulling=true;
     try{
-      const res = await fetch(url, { cache:'no-store' });
-      const j = await res.json();
+      const url=$('#cloudUrl').value.trim(); if(!url) return;
+      const res=await fetch(url,{cache:'no-store'});
+      const j=await res.json();
+      if(!res.ok || !j || !j.ok){ return; }
 
-      if(!res.ok || !j || !j.ok){ alert('Buluttan okuma başarısız.'); return; }
+      const cloud=j.data||{};
+      const cloudSha=j.sha||null;
 
-      const cloud = j.data || {};
-      const local = JSON.parse(localStorage.getItem(LS_KEY) || '{"people":[],"types":[],"records":[],"lastByType":{}}');
+      // Sürüm karşılaştırma: meta yoksa bulutu kabul et
+      const localMeta=state.__meta||{updatedAt:0};
+      const cloudMeta=cloud.__meta||{updatedAt:0};
 
-      const cloudEmpty = !(cloud.records?.length || cloud.people?.length || cloud.types?.length);
-      const localHas  =   (local.records?.length || local.people?.length || local.types?.length);
-
-      if (cloudEmpty && localHas) {
-        const go = confirm('⚠️ Buluttaki veri boş görünüyor. Yerelde veri var. Yereldekini buluta göndermek ister misiniz?');
-        if (!go) return;
-
-        const resUp = await fetch(url,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ data: local })
-        });
-        const up = await resUp.json();
-        if(up && up.ok){
-          alert('✅ Yerel veri buluta gönderildi.');
-        }else{
-          alert('Buluta gönderme başarısız.');
-        }
-        return;
+      // Sha değişmişse ve bulut daha yeniyse -> yereli bulutla değiştir
+      if(cloudSha!==lastSeenSha && (cloudMeta.updatedAt>localMeta.updatedAt)){
+        state=cloud; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
+        save(); render();
       }
-
-      // Bulut dolu → yereli bulutla değiştir
-      localStorage.setItem(LS_KEY, JSON.stringify(cloud));
-      state = cloud;
-      save(); render();
-      alert('✅ Buluttan çekildi.');
+      lastSeenSha = cloudSha;
     }catch(e){
-      console.error(e);
-      alert('Buluttan okuma sırasında hata oluştu.');
-    }
+      // sessiz
+    }finally{ pulling=false; }
   }
 
-  // Butonlar
-  $('#btnCloudPush').onclick=()=>cloudPush().then(()=>alert('Buluta gönderildi.')).catch(e=>alert(e.message));
-  $('#btnCloudPull').onclick=()=>pullFromCloudSafe();
+  // Başlangıçta hemen bir pull
+  cloudPull();
 
-  // SW kaydı (isteğe bağlı)
+  // Periyodik pull (10 sn)
+  setInterval(cloudPull, 10000);
+
+  // Sekme odaklanınca ve çevrimiçi olunca anında pull
+  document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') cloudPull(); });
+  window.addEventListener('online', cloudPull);
+
+  // URL değişirse kaydet ve hemen çek
+  $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
+
+  // SW kaydı
   if('serviceWorker' in navigator){
     window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}));
   }
@@ -425,4 +405,3 @@
 </script>
 </body>
 </html>
-
