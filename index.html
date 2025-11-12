@@ -14,7 +14,7 @@
 <meta http-equiv="Expires" content="0">
 
 <style>
-  :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --accent:#22c55e; --accent2:#3b82f6; --danger:#ef4444; --chip:#1f2937; }
+  :root{ --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --chip:#1f2937; --accent2:#3b82f6; }
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:#e5e7eb}
   .wrap{max-width:1200px;margin:auto;padding:24px}
@@ -23,46 +23,49 @@
   .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
   label{display:block;margin:10px 0 6px;color:#cbd5e1;font-weight:600}
   input[type=text],input[type=date],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
-  textarea{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
   .row{display:flex;gap:8px;align-items:center}
   .row.between{justify-content:space-between}
   .row>*{flex:1}
   .btn{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
   .btn.small{padding:4px 8px;font-size:12px;border-radius:999px}
   .btn:hover{filter:brightness(1.15)}
-  .btn-prim{background:linear-gradient(135deg,var(--accent2),#06b6d4);border:0;color:white}
-  .btn-good{background:linear-gradient(135deg,var(--accent),#16a34a);border:0;color:white}
+  .btn-prim{background:linear-gradient(135deg,#3b82f6,#06b6d4);border:0;color:white}
+  .btn-good{background:linear-gradient(135deg,#22c55e,#16a34a);border:0;color:white}
   .btn-danger{background:linear-gradient(135deg,#ef4444,#f97316);border:0;color:white}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 8px;border-radius:999px;background:var(--chip);border:1px solid #334155}
   .muted{color:var(--muted)}
   table{width:100%;border-collapse:collapse;text-align:center}
-  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;text-align:center;vertical-align:middle}
-  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+  th,td{padding:8px 10px;border-bottom:1px solid #1f2937;vertical-align:middle}
+  th{position:sticky;top:0;background:#0b1220;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
   tbody tr:hover{background:#0b1220}
-  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block;text-align:center}
-  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block;text-align:center}
+  .kbadge{font-weight:700;padding:2px 6px;border-radius:8px;background:#1e293b;display:inline-block}
+  .pill{padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid #334155;display:inline-block}
   .stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
   .small{font-size:12px}
   .right{display:flex;gap:8px;justify-content:flex-end}
   details{border:1px dashed #334155;border-radius:12px;padding:10px}
   summary{cursor:pointer;color:#93c5fd}
+
+  /* Puan kutuları */
   .score-picker{display:flex;gap:6px;justify-content:center;margin-top:6px}
-  .score-box{width:40px;height:24px;border-radius:6px;border:1px solid #444;cursor:pointer;opacity:.85;transition:transform .12s, opacity .12s, box-shadow .12s}
+  .score-box{width:40px;height:24px;border-radius:6px;border:1px solid #444;cursor:pointer;opacity:.85;transition:transform .12s,opacity .12s,box-shadow .12s}
   .score-box:hover{opacity:1;transform:translateY(-1px)}
   .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
   .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
 
+  /* Sekmeler */
   .tab-group{display:flex;gap:6px}
   .tab-btn{border:1px solid #334155;background:#0b1220;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
   .tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
 
-  @media (max-width: 900px){
+  /* DİĞER üst alanı mobilde dikey */
+  @media (max-width:900px){
     .grid{grid-template-columns:1fr}
     .wrap{padding:16px}
     .card{padding:14px}
     h1{font-size:20px}
-    .btn{padding:12px 14px}
-    table{font-size:13px}
+    #digerInline .row{flex-direction:column;align-items:stretch}
+    #digerInline .row>*{width:100%}
   }
 </style>
 </head>
@@ -73,6 +76,7 @@
       <div class="card">
         <h2>Yeni Kayıt</h2>
 
+        <!-- ÜST SATIR: Tür + Kişi + (DİĞER alt kategori) -->
         <div class="row">
           <div>
             <label>Görev Türü</label>
@@ -81,6 +85,16 @@
           <div>
             <label>Kişi <span class="muted small" id="suggestHint"></span></label>
             <select id="personSelect"></select>
+          </div>
+
+          <!-- DİĞER seçilince görünecek -->
+          <div id="digerInline" style="display:none">
+            <label>Alt Kategori (DİĞER)</label>
+            <div class="row">
+              <select id="digerTaskSelectTop"></select>
+              <input id="digerTaskNewTop" type="text" placeholder="Yeni DİĞER">
+              <button class="btn" id="btnAddDigerTaskTop">Ekle</button>
+            </div>
           </div>
         </div>
 
@@ -95,15 +109,8 @@
           </div>
         </div>
 
-        <!-- DİĞER alanları -->
+        <!-- DİĞER: puan & not -->
         <div id="otherWrap" style="display:none">
-          <label>DİĞER Görev Türü</label>
-          <div class="row">
-            <select id="digerTaskSelect"></select>
-            <input id="digerTaskNew" type="text" placeholder="Yeni DİĞER görevi (örn. GOREV3)">
-            <button class="btn" id="btnAddDigerTask">Ekle</button>
-          </div>
-
           <label>Puan (1–5) & Açıklama</label>
           <div class="score-picker" id="scorePicker">
             <div class="score-box" data-val="1" style="background:#fff7b2"></div>
@@ -165,10 +172,10 @@
           </div>
         </div>
 
-        <!-- ÖZET TABLO -->
+        <!-- Özet -->
         <div id="summaryWrap" style="overflow:auto; max-height:420px"><table id="summaryTable"></table></div>
 
-        <!-- DİĞER TABLO (matris: satırlar=DİĞER görevleri, sütunlar=personel) -->
+        <!-- DİĞER matrisi -->
         <div id="digerWrap" style="display:none; overflow:auto; max-height:420px">
           <table id="digerTable"></table>
 
@@ -191,8 +198,7 @@
 
 <script>
 (function(){
-  /* ===== Helpers & IDs ===== */
-  const LS_KEY='gorevTakip_v11';
+  const LS_KEY='gorevTakip_v11';             // mevcut verini koruyalım
   const OTHER_TYPE='DIGER';
   const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
   const $=s=>document.querySelector(s);
@@ -200,7 +206,6 @@
   const DEFAULT_WORKER='https://blue-violet-32c9.retkitselim.workers.dev/';
   const UI_KEY=LS_KEY+'__ui';
 
-  // client id
   function ensureClientId(){
     let id=localStorage.getItem(LS_KEY+'__clientId');
     if(!id){ id='c-'+Math.random().toString(36).slice(2)+Date.now(); localStorage.setItem(LS_KEY+'__clientId',id); }
@@ -208,17 +213,14 @@
   }
   const CLIENT_ID=ensureClientId();
 
-  /* ===== State ===== */
   let state;
   try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
   if(!state){
     state={
       people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK","SAGLAM"],
       types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
-      digerTasks:["GOREV1","GOREV2"],          // <<< DİĞER görev satırları
-      records:[],
-      lastByType:{},
-      __meta:{updatedAt:Date.now(), clientId:CLIENT_ID}
+      digerTasks:["GOREV1","GOREV2"],
+      records:[], lastByType:{}, __meta:{updatedAt:Date.now(), clientId:CLIENT_ID}
     };
   } else {
     state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
@@ -227,7 +229,6 @@
   const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
   const bumpMeta=()=>{ state.__meta={updatedAt:Date.now(),clientId:CLIENT_ID}; };
 
-  /* ===== Counters ===== */
   function weightOfRecord(r){
     if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
     if(r.type===OTHER_TYPE)     return Math.max(1, Math.min(5, Number(r.points||1)));
@@ -266,7 +267,6 @@
     return nextMin(type);
   }
 
-  /* ===== UI state ===== */
   let currentView = (JSON.parse(localStorage.getItem(UI_KEY)||'{}').view) || 'summary';
   function setView(v){
     currentView=v;
@@ -279,11 +279,17 @@
     $('#tabDiger').classList.toggle('active', isDiger);
     $('#tabDiger').setAttribute('aria-selected', String(isDiger));
   }
-
   function toggleOtherInputs(){
     const show=$('#taskType').value===OTHER_TYPE;
-    $('#otherWrap').style.display= show? 'block':'none';
-    if (show) setView('diger'); else if (currentView==='diger') setView('summary');
+    $('#otherWrap').style.display = show ? 'block' : 'none';
+    $('#digerInline').style.display = show ? 'block' : 'none';
+    if (show){
+      const selTop = $('#digerTaskSelectTop');
+      if (selTop && !selTop.value && state.digerTasks.length) selTop.value = state.digerTasks[0];
+      setView('diger');
+    } else if (currentView==='diger'){
+      setView('summary');
+    }
   }
   function initScorePicker(){
     const boxes=document.querySelectorAll('#scorePicker .score-box');
@@ -298,7 +304,6 @@
     (boxes[0]||{}).click?.();
   }
 
-  /* ===== Render SUMMARY ===== */
   function renderSummary(){
     const types=state.types; const tbl=$('#summaryTable');
     const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
@@ -318,89 +323,78 @@
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
   }
 
-  /* ===== Render DİĞER (MATRİS) ===== */
- function renderDiger(){
-  // Başlık: ilk boş hücre + personel sütun başlıkları
-  const head = `
-    <thead>
-      <tr>
-        <th><span class="pill">DİĞER GÖREVLER</span></th>
-        ${state.people.map(p=>`<th><span class="pill">${p}</span></th>`).join('')}
-      </tr>
-    </thead>`;
+  function renderDiger(){
+    const head = `
+      <thead>
+        <tr>
+          <th><span class="pill">DİĞER GÖREVLER</span></th>
+          ${state.people.map(p=>`<th><span class="pill">${p}</span></th>`).join('')}
+        </tr>
+      </thead>`;
 
-  // TOPLAM hesapları (sütun toplamı)
-  const totals = new Map(state.people.map(p=>[p,0]));
-
-  // Görev satırları (GOREV1, GOREV2, …)
-  const taskRows = state.digerTasks.map(task => {
-    const cells = state.people.map(p => {
-      const c = state.records.filter(r =>
-        r.type===OTHER_TYPE && r.digerTask===task && r.person===p
-      ).length;
-      totals.set(p, (totals.get(p)||0) + c);
-      return `<td>${c||0}</td>`;
+    const totals = new Map(state.people.map(p=>[p,0]));
+    const taskRows = state.digerTasks.map(task => {
+      const cells = state.people.map(p => {
+        const c = state.records.filter(r => r.type===OTHER_TYPE && r.digerTask===task && r.person===p).length;
+        totals.set(p,(totals.get(p)||0)+c);
+        return `<td>${c||0}</td>`;
+      }).join('');
+      return `<tr><td><span class="kbadge">${task}</span></td>${cells}</tr>`;
     }).join('');
-    return `<tr><td><span class="kbadge">${task}</span></td>${cells}</tr>`;
-  }).join('');
 
-  // Sıra satırı (Özet Tablo benzeri): DİĞER için öneriyi tek satırda göster
-  const next = suggest(OTHER_TYPE) || '-';
-  const siraRow = `
-    <tr>
-      <td class="muted small">Sıra</td>
-      <td colspan="${state.people.length}" style="text-align:left">
-        <span class="pill">${next}</span> <span class="muted small">— DİĞER için öneri</span>
-      </td>
-    </tr>`;
+    const next = suggest(OTHER_TYPE) || '-';
+    const siraRow = `
+      <tr>
+        <td class="muted small">Sıra</td>
+        <td colspan="${state.people.length}" style="text-align:left">
+          <span class="pill">${next}</span> <span class="muted small">— DİĞER için öneri</span>
+        </td>
+      </tr>`;
 
-  // TOPLAM satırı (sütun bazında toplam adetler)
-  const toplamRow = `
-    <tr>
-      <td><b>TOPLAM</b></td>
-      ${state.people.map(p=>`<td><b>${totals.get(p)||0}</b></td>`).join('')}
-    </tr>`;
+    const toplamRow = `
+      <tr>
+        <td><b>TOPLAM</b></td>
+        ${state.people.map(p=>`<td><b>${totals.get(p)||0}</b></td>`).join('')}
+      </tr>`;
 
-  // Tabloyu yaz
-  $('#digerTable').innerHTML = head + '<tbody>' + siraRow + toplamRow + taskRows + '</tbody>';
+    $('#digerTable').innerHTML = head + '<tbody>' + siraRow + toplamRow + taskRows + '</tbody>';
 
-  // DİĞER görev chip'leri (ekle/sil)
-  const dc=$('#digerTaskChips'); dc.innerHTML='';
-  state.digerTasks.forEach(t=>{
-    const w=document.createElement('span'); w.className='chip';
-    w.innerHTML=`<span>${t}</span>`;
-    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-    d.onclick=()=>{ if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
-      if(!confirm(`${t} silinsin mi?`)) return;
-      state.digerTasks = state.digerTasks.filter(x=>x!==t);
-      bumpMeta(); save(); renderAll(); schedulePush();
-    };
-    w.appendChild(d); dc.appendChild(w);
-  });
+    // DİĞER görev chip'leri (ekle/sil)
+    const dc=$('#digerTaskChips'); dc.innerHTML='';
+    state.digerTasks.forEach(t=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${t}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
+        if(!confirm(`${t} silinsin mi?`)) return;
+        state.digerTasks = state.digerTasks.filter(x=>x!==t);
+        bumpMeta(); save(); renderAll(); schedulePush();
+      };
+      w.appendChild(d); dc.appendChild(w);
+    });
 
-  // DİĞER görev seçimi listesi
-  $('#digerTaskSelect').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+    // Üstteki alt-kategori select'i doldur
+    $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
 
-  // DİĞER panelindeki personel chip'leri (kısayol)
-  const pc2=$('#peopleChips2'); pc2.innerHTML='';
-  state.people.forEach(p=>{
-    const w=document.createElement('span'); w.className='chip';
-    w.innerHTML=`<span>${p}</span>`;
-    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-    d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
-      state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush();
-    };
-    w.appendChild(d); pc2.appendChild(w);
-  });
-}
+    // DİĞER panelindeki personel chip'leri (kısayol)
+    const pc2=$('#peopleChips2'); pc2.innerHTML='';
+    state.people.forEach(p=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${p}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
+        state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush();
+      };
+      w.appendChild(d); pc2.appendChild(w);
+    });
+  }
 
-  /* ===== Render ortak (listeler + log) ===== */
   function renderListsAndLog(){
     $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
     $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
     if(!$('#startDate').value) $('#startDate').value=today();
 
-    // Ana personel & tür yönetimi
+    // Personel & tür chips
     const pc=$('#peopleChips'); pc.innerHTML='';
     state.people.forEach(p=>{
       const w=document.createElement('span'); w.className='chip';
@@ -457,13 +451,16 @@
     const type=$('#taskType').value, person=$('#personSelect').value;
     const s=$('#startDate').value, e=$('#endDate').value;
     if(!type||!person||!s) return alert('Eksik bilgi');
+
     let end=e; if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
     let days=Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1;
 
     const rec={type,person,start:s,end:end,days};
     if(type===OTHER_TYPE){
-      rec.digerTask = ($('#digerTaskSelect').value||'').trim();
-      if(!rec.digerTask){ return alert('DİĞER görevi seçin/ekleyin.'); }
+      const selTop = $('#digerTaskSelectTop');
+      const chosen = (selTop && selTop.value || '').trim();
+      if(!chosen) return alert('DİĞER alt kategorisini seçin veya ekleyin.');
+      rec.digerTask = chosen;
       rec.points=Math.max(1,Math.min(5,Number($('#pointsInput').value||'1')));
       rec.note=($('#noteInput').value||'').trim();
       $('#noteInput').value='';
@@ -474,19 +471,18 @@
     bumpMeta(); save(); renderAll(); schedulePush();
   };
 
-  // DİĞER görev ekleme (iki yerdeki buton aynı işlemi yapar)
+  // DİĞER görev ekleme: üstteki ve detay içindeki butonlar
   function addDigerTaskFrom(inputId){
     const v=$(inputId).value.trim();
     if(v && !state.digerTasks.includes(v)){
       state.digerTasks.push(v);
       $(inputId).value='';
       bumpMeta(); save(); renderAll(); schedulePush();
-      // yeni eklenen otomatik seçilsin
-      $('#digerTaskSelect').value=v;
+      const selTop = $('#digerTaskSelectTop'); if (selTop) selTop.value = v; // otomatik seç
     }
   }
-  $('#btnAddDigerTask').onclick=()=>addDigerTaskFrom('#digerTaskNew');
-  $('#btnAddDigerTask2').onclick=()=>addDigerTaskFrom('#digerTaskNew2');
+  $('#btnAddDigerTaskTop').onclick = () => addDigerTaskFrom('#digerTaskNewTop');
+  $('#btnAddDigerTask2').onclick   = () => addDigerTaskFrom('#digerTaskNew2');
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
 
@@ -508,17 +504,14 @@
   }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
   document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ renderAll(); $('#btnSuggest').click(); });
 
-  // Sekmeler
   $('#tabSummary').onclick=()=>setView('summary');
   $('#tabDiger').onclick=()=>setView('diger');
 
-  // Cloud URL
   try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); $('#cloudUrl').value=c.url||DEFAULT_WORKER; }catch{ $('#cloudUrl').value=DEFAULT_WORKER; }
 
-  // İlk render
   renderAll(); initScorePicker();
 
-  /* ===== Otomatik Bulut Senkron ===== */
+  /* ===== Bulut Senkron ===== */
   let pushDebounce=null, pulling=false, lastSeenSha=null;
 
   function schedulePush(){
@@ -555,7 +548,7 @@
   window.addEventListener('online', cloudPull);
   $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
 
-  /* ===== Service Worker (network-first HTML + auto reload) ===== */
+  /* ===== Service Worker ===== */
   if('serviceWorker' in navigator){
     window.addEventListener('load', async () => {
       try {
@@ -578,4 +571,3 @@
 </script>
 </body>
 </html>
-
