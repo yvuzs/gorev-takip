@@ -453,7 +453,24 @@
     wChip.appendChild(del);
     dc.appendChild(wChip);
   });
-  $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+ // Mevcut seçimi hatırla
+const selEl = document.getElementById('digerTaskSelectTop');
+const prevValue = selEl ? selEl.value : '';
+
+// Seçenekleri yeniden yaz
+document.getElementById('digerTaskSelectTop').innerHTML =
+  state.digerTasks.map(t => `<option>${t}</option>`).join('');
+
+// Eski seçimi geri yükle (varsa), yoksa ilkini seç
+const selTop = document.getElementById('digerTaskSelectTop');
+if (prevValue && state.digerTasks.includes(prevValue)) {
+  selTop.value = prevValue;
+} else if (state.digerTasks.length && !selTop.value) {
+  selTop.value = state.digerTasks[0];
+}
+// (İsteğe bağlı) öneriyi güncelle
+// document.getElementById('btnSuggest').click();
+
   const pc2 = $('#peopleChips2'); pc2.innerHTML='';
   state.people.forEach(p=>{
     const wChip = document.createElement('span');
@@ -515,7 +532,7 @@
 
             // events
             $('#taskType').onchange = ()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
-            $('#digerTaskSelectTop').addEventListener('change', ()=>{ $('#btnSuggest').click(); renderDiger(); });
+            $('#digerTaskSelectTop').addEventListener('change', ()=>{ $('#btnSuggest').click(); });
 
             $('#btnSuggest').onclick = ()=>{
                 const t = $('#taskType').value;
@@ -651,5 +668,6 @@
         </script>
     </body>
 </html>
+
 
 
