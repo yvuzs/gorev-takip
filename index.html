@@ -391,13 +391,15 @@
         else if(mode==='idle') next = nextIdleForTask(task);
         else next = nextMinForTask(task);
 
-        const cells = orderedPeople.map(p => {
-            const c = state.records.filter(r =>
-                ((r.type||'').toUpperCase() === OTHER_TYPE.toUpperCase() || (r.type||'').toUpperCase() === 'DİĞER' || (r.type||'').toUpperCase() === 'DIGER')
-                && r.digerTask === task && r.person === p
-            ).length;
-            return `<td>${c||0}</td>`;
-        }).join('');
+       const cells = state.people.map(p => {
+  const sum = state.records.reduce((acc, r) => {
+    if (r.type===OTHER_TYPE && r.digerTask===task && r.person===p) {
+      return acc + (typeof weightOfRecord === 'function' ? weightOfRecord(r) : (Number(r.points)||1));
+    }
+    return acc;
+  }, 0);
+  return `<td>${sum||0}</td>`;
+}).join('');
 
         return `<tr><td><span class="kbadge">${task}</span></td><td><span class="pill">${next||'-'}</span></td>${cells}</tr>`;
     }).join('');
@@ -621,5 +623,6 @@
     </body>
         
 </html>
+
 
 
