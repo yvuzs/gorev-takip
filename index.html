@@ -228,10 +228,30 @@
             const bumpMeta = () => { state.__meta = {updatedAt:Date.now(), clientId: CLIENT_ID}; };
 
             function weightOfRecord(r){
-                if (daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
-                if (r.type===OTHER_TYPE) return Math.max(1, Math.min(5, Number(r.points||1)));
-                return 1;
-            }
+  // Gün sayısı (start–end arası), en az 1
+  const s = new Date(r.start);
+  const e = new Date(r.end || r.start);
+  let days = Math.ceil((e - s) / 86400000);
+  if (!isFinite(days) || days < 1) days = 1;
+
+  const T = (r.type || '').toUpperCase();
+  const isOther = T === (OTHER_TYPE || '').toUpperCase() || T === 'DİĞER' || T === 'DIGER';
+
+  if (isOther) {
+    const pts = Number(r.points || 0);
+    // İSTENEN: tarih aralığı gün sayısı + (varsa) puan
+    return days + (pts > 0 ? pts : 0);
+  }
+
+  // Diğer bazı türler günle ağırlanıyorsa koru (sende vardı)
+  if (typeof daysWeighted !== 'undefined' && daysWeighted.has(r.type)) {
+    return days;
+  }
+
+  // Varsayılan
+  return 1;
+}
+
             function countsBy(type){
                 const m = new Map(state.people.map(p=>[p,0]));
                 state.records.forEach(r=>{ if(!type || r.type===type){ m.set(r.person, (m.get(r.person)||0) + weightOfRecord(r)); } });
@@ -631,4 +651,5 @@
         </script>
     </body>
 </html>
+
 
