@@ -67,6 +67,15 @@
     #digerInline .row{flex-direction:column;align-items:stretch}
     #digerInline .row>*{width:100%}
   }
+
+  /* ---- Compact DİĞER inline layout ---- */
+  .row.compact { gap: 6px; align-items: center; }
+  #digerInline select { min-width: 140px; }
+  @media (max-width: 900px){
+    .row { flex-wrap: wrap; }
+    #digerInline select { width: 100%; }
+  }
+
 </style>
 </head>
 <body>
@@ -90,12 +99,11 @@
           <!-- DİĞER seçilince görünecek -->
           <div id="digerInline" style="display:none">
             <label>Alt Kategori (DİĞER)</label>
-            <div class="row">
+            <div class="row compact">
               <select id="digerTaskSelectTop"></select>
-              <input id="digerTaskNewTop" type="text" placeholder="Yeni DİĞER">
-              <button class="btn" id="btnAddDigerTaskTop">Ekle</button>
             </div>
           </div>
+        </div>
         </div>
 
         <div class="row">
@@ -484,7 +492,6 @@
       const selTop = $('#digerTaskSelectTop'); if (selTop) selTop.value = v; // otomatik seç
     }
   }
-  $('#btnAddDigerTaskTop').onclick = () => addDigerTaskFrom('#digerTaskNewTop');
   $('#btnAddDigerTask2').onclick   = () => addDigerTaskFrom('#digerTaskNew2');
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
@@ -574,5 +581,6 @@
 </script>
 </body>
 </html>
+
 
 
