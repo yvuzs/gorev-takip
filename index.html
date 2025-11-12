@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 
@@ -25,9 +25,10 @@
   input[type=text],input[type=date],select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;text-align:center}
   textarea{width:100%;min-height:70px;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
   .row{display:flex;gap:8px;align-items:center}
+  .row.between{justify-content:space-between}
   .row>*{flex:1}
   .btn{padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb;cursor:pointer;text-align:center}
-  .btn.small{padding:4px 8px;font-size:12px;border-radius:8px}
+  .btn.small{padding:4px 8px;font-size:12px;border-radius:999px}
   .btn:hover{filter:brightness(1.15)}
   .btn-prim{background:linear-gradient(135deg,var(--accent2),#06b6d4);border:0;color:white}
   .btn-good{background:linear-gradient(135deg,var(--accent),#16a34a);border:0;color:white}
@@ -50,6 +51,12 @@
   .score-box:hover{opacity:1;transform:translateY(-1px)}
   .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
   .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
+
+  /* Tab buton grubu */
+  .tab-group{display:flex;gap:6px}
+  .tab-btn{border:1px solid #334155;background:#0b1220;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+
   @media (max-width: 900px){
     .grid{grid-template-columns:1fr}
     .wrap{padding:16px}
@@ -140,8 +147,22 @@
       </div>
 
       <div class="card">
-        <h2 style="text-align:center">Özet Tablo</h2>
+        <div class="row between" style="align-items:center;margin-bottom:8px">
+          <h2 style="margin:0">Özet Tablo</h2>
+          <div class="tab-group" role="tablist" aria-label="Tablolar">
+            <button id="tabSummary" class="tab-btn active" role="tab" aria-selected="true">Özet</button>
+            <button id="tabDiger" class="tab-btn" role="tab" aria-selected="false">DİĞER</button>
+          </div>
+        </div>
+
+        <!-- ÖZET TABLO -->
         <div id="summaryWrap" style="overflow:auto; max-height:420px"><table id="summaryTable"></table></div>
+
+        <!-- DİĞER TABLO -->
+        <div id="digerWrap" style="display:none; overflow:auto; max-height:420px">
+          <table id="digerTable"></table>
+        </div>
+
         <h3 style="text-align:center">Kayıtlar</h3>
         <div id="logWrap" style="overflow:auto; max-height:260px"><table id="logTable"></table></div>
       </div>
@@ -151,12 +172,13 @@
 <script>
 (function(){
   /* ===== Helpers & IDs ===== */
-  const LS_KEY='gorevTakip_v9';
+  const LS_KEY='gorevTakip_v10';
   const OTHER_TYPE='DIGER';
   const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
   const $=s=>document.querySelector(s);
   const today=()=>new Date().toISOString().slice(0,10);
   const DEFAULT_WORKER='https://blue-violet-32c9.retkitselim.workers.dev/';
+  const UI_KEY=LS_KEY+'__ui';   // aktif tablo görünümü için
 
   // Benzersiz istemci kimliği
   function ensureClientId(){
@@ -170,7 +192,7 @@
   let state;
   try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
   if(!state){
-    state={ people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK"],
+    state={ people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK","SAGLAM"],
             types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
             records:[], lastByType:{}, __meta:{updatedAt:Date.now(), clientId:CLIENT_ID} };
   } else {
@@ -179,9 +201,10 @@
   const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
   function bumpMeta(){ state.__meta={updatedAt:Date.now(), clientId:CLIENT_ID}; }
 
+  /* ===== Weights / Counters ===== */
   function weightOfRecord(r){
     if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
-    if(r.type===OTHER_TYPE)   return Math.max(1, Math.min(5, Number(r.points)||1));
+    if(r.type===OTHER_TYPE)     return Math.max(1, Math.min(5, Number(r.points)||1));
     return 1;
   }
   function countsBy(type){
@@ -217,9 +240,25 @@
     return nextMin(type);
   }
 
+  /* ===== UI helpers ===== */
+  let currentView = (JSON.parse(localStorage.getItem(UI_KEY)||'{}').view) || 'summary';
+  function setView(v){
+    currentView=v;
+    localStorage.setItem(UI_KEY, JSON.stringify({view:v}));
+    const isDiger = (v==='diger');
+    $('#summaryWrap').style.display = isDiger ? 'none' : 'block';
+    $('#digerWrap').style.display   = isDiger ? 'block' : 'none';
+    $('#tabSummary').classList.toggle('active', !isDiger);
+    $('#tabSummary').setAttribute('aria-selected', String(!isDiger));
+    $('#tabDiger').classList.toggle('active', isDiger);
+    $('#tabDiger').setAttribute('aria-selected', String(isDiger));
+  }
+
   function toggleOtherInputs(){
     const show=$('#taskType').value===OTHER_TYPE;
     $('#otherWrap').style.display= show? 'block':'none';
+    // DIGER seçilince otomatik DIGER görünümü
+    if (show) setView('diger'); else if (currentView==='diger') setView('summary');
   }
   function initScorePicker(){
     const boxes=document.querySelectorAll('#scorePicker .score-box');
@@ -234,41 +273,80 @@
     (boxes[0]||{}).click?.();
   }
 
-  /* ===== Render ===== */
-  function render(){
-    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||''}));
-
-    $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
-    $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
-    if(!$('#startDate').value) $('#startDate').value=today();
-    toggleOtherInputs();
-
+  /* ===== Render: SUMMARY ===== */
+  function renderSummary(){
     const types=state.types; const tbl=$('#summaryTable');
     const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
     const siraCells=types.map(t=>`<td><span class="pill">${suggest(t)||'-'}</span></td>`).join('');
     const siraRow=`<tr><td class="muted small">Sıra</td>${siraCells}<td></td></tr>`;
+
     const rows = state.people
-  .map(p => {
-    const cells = types.map(t => countsBy(t).get(p) || 0);
-    const tot = cells.reduce((a, b) => a + b, 0);
-    return { p, cells, tot };
-  })
-  // toplam az olan yukarı, çok olan aşağı
-  .sort((a, b) => a.tot - b.tot)
-  .map(obj =>
-    `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`
-  )
-  .join('');
+      .map(p => {
+        const cells = types.map(t => countsBy(t).get(p) || 0);
+        const tot   = cells.reduce((a, b) => a + b, 0);
+        return { p, cells, tot };
+      })
+      .sort((a, b) => a.tot - b.tot) // azdan çoğa
+      .map(obj => `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`)
+      .join('');
 
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
+  }
 
+  /* ===== Render: DIGER TABLE ===== */
+  function renderDiger(){
+    const tbl=$('#digerTable');
+
+    // Kişi bazında: ADET ve PUAN TOPLAM + SON NOT
+    const base = new Map(state.people.map(p=>[p,{count:0,points:0,lastNote:''}]));
+    state.records.forEach(r=>{
+      if(r.type!==OTHER_TYPE) return;
+      const o = base.get(r.person) || {count:0,points:0,lastNote:''};
+      o.count  += 1;
+      o.points += Math.max(1, Math.min(5, Number(r.points||1)));
+      if((r.note||'').trim()) o.lastNote = r.note.trim(); // en son girilen not
+      base.set(r.person, o);
+    });
+
+    const head = `
+      <thead>
+        <tr>
+          <th><span class="pill">PERSONEL</span></th>
+          <th><span class="pill">ADET</span></th>
+          <th><span class="pill">PUAN TOPLAM</span></th>
+          <th><span class="pill">SON NOT</span></th>
+        </tr>
+      </thead>`;
+
+    const rows = state.people
+      .map(p => ({ p, ...(base.get(p)||{count:0,points:0,lastNote:''}) }))
+      .sort((a,b)=> a.points - b.points) // az puan yapan üste
+      .map(o => `<tr>
+        <td><span class="kbadge">${o.p}</span></td>
+        <td>${o.count}</td>
+        <td><b>${o.points}</b></td>
+        <td style="text-align:left">${(o.lastNote||'').slice(0,60)}</td>
+      </tr>`)
+      .join('');
+
+    tbl.innerHTML = head + '<tbody>'+ rows +'</tbody>';
+  }
+
+  /* ===== Render: COMMON ===== */
+  function renderListsAndLog(){
+    // dropdownlar
+    $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
+    $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
+    if(!$('#startDate').value) $('#startDate').value=today();
+
+    // chips
     const pc=$('#peopleChips'); pc.innerHTML='';
     state.people.forEach(p=>{
       const w=document.createElement('span'); w.className='chip';
       w.innerHTML=`<span>${p}</span>`;
       const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
       d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
-        state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); render(); schedulePush();
+        state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush();
       };
       w.appendChild(d); pc.appendChild(w);
     });
@@ -280,55 +358,66 @@
       const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
       d.onclick=()=>{ if(state.types.length<=1) return alert('En az bir tür kalmalı.');
         if(!confirm(`${t} silinsin mi?`)) return;
-        state.types=state.types.filter(x=>x!==t); bumpMeta(); save(); render(); schedulePush();
+        state.types=state.types.filter(x=>x!==t); bumpMeta(); save(); renderAll(); schedulePush();
       };
       w.appendChild(d); tc.appendChild(w);
     });
 
+    // log
     const log=$('#logTable');
     log.innerHTML='<thead><tr><th><span class="pill">BAŞLANGIÇ</span></th><th><span class="pill">BİTİŞ</span></th><th><span class="pill">TÜR</span></th><th><span class="pill">KİŞİ</span></th><th><span class="pill">PUAN</span></th><th><span class="pill">AÇIKLAMA</span></th><th></th></tr></thead><tbody>'+
       state.records.slice().reverse().map((r,i)=>{
         const idx=state.records.length-1-i;
-        const p=(r.type===OTHER_TYPE)?(r.points||''):'';
-        const note=(r.type===OTHER_TYPE)?(r.note||''):'';
+        const p=(r.type===OTHER_TYPE)?(r.points||''):''; const note=(r.type===OTHER_TYPE)?(r.note||''):'';
         return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}</td><td>${r.person}</td><td>${p}</td><td>${note}</td>
           <td><button class="btn small" data-del="${idx}">Sil</button></td></tr>`;
       }).join('')+'</tbody>';
     log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
       const idx=+b.getAttribute('data-del');
-      state.records.splice(idx,1); bumpMeta(); save(); render(); schedulePush();
+      state.records.splice(idx,1); bumpMeta(); save(); renderAll(); schedulePush();
     });
+  }
+
+  function renderAll(){
+    localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value||''}));
+    renderListsAndLog();
+    renderSummary();
+    renderDiger();
+    toggleOtherInputs();   // DIGER seçiliyse görünüm ayarla
+    setView(currentView);  // sekme durumunu uygula
   }
 
   /* ===== Actions ===== */
   $('#taskType').onchange=()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
+
   $('#btnSuggest').onclick=()=>{ const t=$('#taskType').value; const p=suggest(t); $('#suggestHint').textContent=p?`(öneri: ${p})`:''; if(p) $('#personSelect').value=p; };
 
   $('#btnAdd').onclick=()=>{
     const type=$('#taskType').value, person=$('#personSelect').value;
     const s=$('#startDate').value, e=$('#endDate').value;
     if(!type||!person||!s) return alert('Eksik bilgi');
-    let end=e;
-    if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
+    let end=e; if(!end){ const d=new Date(s); d.setDate(d.getDate()+1); end=d.toISOString().slice(0,10); }
     let days=Math.ceil((new Date(end)-new Date(s))/86400000); if(days<1) days=1;
+
     const rec={type,person,start:s,end:end,days};
     if(type===OTHER_TYPE){
       rec.points=Math.max(1,Math.min(5,Number($('#pointsInput').value||'1')));
       rec.note=($('#noteInput').value||'').trim();
       $('#noteInput').value='';
+      setView('diger'); // DIGER kaydı eklenince DIGER görünümüne geç
     }
     state.records.push(rec);
     state.lastByType[type]=person;
-    bumpMeta(); save(); render(); schedulePush();
+    bumpMeta(); save(); renderAll(); schedulePush();
   };
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
 
   $('#btnAddPerson').onclick=()=>{ const v=$('#newPerson').value.trim();
-    if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; bumpMeta(); save(); render(); schedulePush(); }
+    if(v&&!state.people.includes(v)){ state.people.push(v); $('#newPerson').value=''; bumpMeta(); save(); renderAll(); schedulePush(); }
   };
   $('#btnAddType').onclick=()=>{ const v=$('#newType').value.trim();
-    if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; bumpMeta(); save(); render(); schedulePush(); }
+    if(v&&!state.types.includes(v)){ state.types.push(v); $('#newType').value=''; bumpMeta(); save(); renderAll(); schedulePush(); }
   };
 
   $('#btnExport').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='gorev-takip.json'; a.click(); };
@@ -337,14 +426,19 @@
     const t=await f.text(); const data=JSON.parse(t);
     if(!data.people||!data.types||!Array.isArray(data.records)) throw new Error('Şema hatalı');
     state=data; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
-    save(); render(); schedulePush();
+    save(); renderAll(); schedulePush();
   }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
-  document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ render(); $('#btnSuggest').click(); });
+  document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ renderAll(); $('#btnSuggest').click(); });
+
+  // Tab butonları
+  $('#tabSummary').onclick=()=>setView('summary');
+  $('#tabDiger').onclick=()=>setView('diger');
 
   // Bulut URL yükle
   try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); $('#cloudUrl').value=c.url||DEFAULT_WORKER; }catch{ $('#cloudUrl').value=DEFAULT_WORKER; }
 
-  render(); initScorePicker();
+  // İlk render
+  renderAll(); initScorePicker();
 
   /* ===== Otomatik Bulut Senkron ===== */
   let pushDebounce=null, pulling=false, lastSeenSha=null;
@@ -360,11 +454,7 @@
 
   async function cloudPush(){
     const url=$('#cloudUrl').value.trim(); if(!url) return;
-    const res=await fetch(url,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ data: state })
-    });
+    const res=await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ data: state }) });
     const j=await res.json();
     if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
     return true;
@@ -374,78 +464,46 @@
     if(pulling) return; pulling=true;
     try{
       const url=$('#cloudUrl').value.trim(); if(!url) return;
-      const res=await fetch(url,{cache:'no-store'});
-      const j=await res.json();
+      const res=await fetch(url,{cache:'no-store'}); const j=await res.json();
       if(!res.ok || !j || !j.ok){ return; }
 
-      const cloud=j.data||{};
-      const cloudSha=j.sha||null;
+      const cloud=j.data||{}; const cloudSha=j.sha||null;
+      const localMeta=state.__meta||{updatedAt:0}; const cloudMeta=cloud.__meta||{updatedAt:0};
 
-      // Sürüm karşılaştırma: meta yoksa bulutu kabul et
-      const localMeta=state.__meta||{updatedAt:0};
-      const cloudMeta=cloud.__meta||{updatedAt:0};
-
-      // Sha değişmişse ve bulut daha yeniyse -> yereli bulutla değiştir
       if(cloudSha!==lastSeenSha && (cloudMeta.updatedAt>localMeta.updatedAt)){
         state=cloud; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
-        save(); render();
+        save(); renderAll();
       }
       lastSeenSha = cloudSha;
-    }catch(e){
-      // sessiz
-    }finally{ pulling=false; }
+    }catch(e){ /* sessiz */ } finally{ pulling=false; }
   }
 
-  // Başlangıçta hemen bir pull
   cloudPull();
-
-  // Periyodik pull (10 sn)
   setInterval(cloudPull, 10000);
-
-  // Sekme odaklanınca ve çevrimiçi olunca anında pull
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') cloudPull(); });
   window.addEventListener('online', cloudPull);
-
-  // URL değişirse kaydet ve hemen çek
   $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
 
-  // SW kaydı
- if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-
-      // Yeni SW bulunduğunda hemen aktif et
-      reg.addEventListener('updatefound', () => {
-        const sw = reg.installing;
-        if (!sw) return;
-        sw.addEventListener('statechange', () => {
-          if (sw.state === 'installed' && reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
+  // SW kaydı (network-first HTML + auto reload yapısına uygun)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        reg.addEventListener('updatefound', () => {
+          const sw = reg.installing;
+          if (!sw) return;
+          sw.addEventListener('statechange', () => {
+            if (sw.state === 'installed' && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          });
         });
-      });
-
-      // Kontrolcü değişirse (yeni SW kontrolü aldı) sayfayı yenile
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // sonsuz döngüyü önlemek için tek seferlik reload
-        if (!window.__reloadedBySW) {
-          window.__reloadedBySW = true;
-          location.reload();
-        }
-      });
-
-      // Manuel tetik: SW güncellemesini kontrol et (her yüklemede)
-      reg.update().catch(()=>{});
-    } catch (e) {
-      console.warn('SW kayıt hatası:', e);
-    }
-  });
-}
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!window.__reloadedBySW) { window.__reloadedBySW = true; location.reload(); }
+        });
+        reg.update().catch(()=>{});
+      } catch (e) { console.warn('SW kayıt hatası:', e); }
+    });
+  }
 })();
 </script>
 </body>
 </html>
-
-
-
