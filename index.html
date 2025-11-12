@@ -163,6 +163,13 @@
                         <label style="margin-top:10px">Personel (kısa yol)</label>
                         <div class="stack" id="peopleChips2"></div>
                     </details>
+                    <div class="row" style="margin-top:8px">
+                      <input type="file" id="excelFile" accept=".xls,.xlsx,.csv" />
+                    </div>
+                    <div class="row">
+                      <input id="excelPerson" type="text" placeholder="Bu dosya hangi kişi için? Örn: AKSU" />
+                      <button class="btn" id="btnExcelImport">Excel'den Ekle</button>
+                    </div>
                     <details open>
                         <summary>Bulut Ayarı</summary>
                         <label>Cloudflare Worker URL</label>
@@ -613,6 +620,108 @@
                 });
             }
         })();
+            // --- Excel içe aktarma (AÇIKLAMA => görev türü olarak) ---
+(function excelImportInit(){
+  const FIELDS = {
+    tarih:   ["Tarih","BAŞLANGIÇ","BASLANGIC","START"],   // tarih sütun adı adayları
+    bitis:   ["Bitiş","BITIS","BİTİŞ","END"],             // bitiş (yoksa +1 gün veriyoruz)
+    aciklama:["Açıklama","ACIKLAMA","AÇIKLAMA","GÖREV","GOREV","GÖREV ADI"], // görev türü kaynağı
+    kisi:    ["Kişi","KISI","PERSONEL","AD"]              // (varsa dosyada kullanır; yoksa inputtaki kişi)
+  };
+
+  function pick(obj, names){
+    for(const n of names){ if(n in obj && obj[n] != null && obj[n] !== "") return obj[n]; }
+    // büyük-küçük duyarsız
+    const keys = Object.keys(obj);
+    for(const n of names){
+      const k = keys.find(k => k.toLowerCase() === n.toLowerCase());
+      if(k && obj[k] != null && obj[k] !== "") return obj[k];
+    }
+    return null;
+  }
+
+  async function readExcel(file){
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:"array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws, { defval:"" });
+  }
+
+  function toDateOnly(v){
+    try{
+      if(!v) return null;
+      // Excel seri numarası veya text olabilir
+      if(typeof v === "number"){ // excel serial
+        const d = XLSX.SSF.parse_date_code(v);
+        const dt = new Date(Date.UTC(d.y, (d.m||1)-1, d.d||1));
+        return dt.toISOString().slice(0,10);
+      }
+      const dt = new Date(v);
+      if(!isNaN(dt)) return dt.toISOString().slice(0,10);
+    }catch{}
+    return null;
+  }
+
+  async function importExcel(file, defaultPerson){
+    const rows = await readExcel(file);
+    const added = [];
+    for(const row of rows){
+      const person = (pick(row, FIELDS.kisi) || defaultPerson || "").toString().trim().toUpperCase();
+      if(!person){ continue; } // kişi yoksa atla
+
+      // açıklamayı görev türü say
+      const typeRaw = (pick(row, FIELDS.aciklama) || "").toString().trim();
+      if(!typeRaw) continue;
+      const type = typeRaw.toUpperCase();  // türleri normalize et
+
+      // tür listesine ekle (yoksa)
+      if(!state.types.includes(type)) state.types.push(type);
+
+      // tarihleri al
+      let start = toDateOnly(pick(row, FIELDS.tarih));
+      let end   = toDateOnly(pick(row, FIELDS.bitis));
+      if(!start){ start = new Date().toISOString().slice(0,10); }
+      if(!end){
+        const d = new Date(start); d.setDate(d.getDate()+1);
+        end = d.toISOString().slice(0,10);
+      }
+
+      const rec = { type, person, start, end, days: 1 };
+      // “DİĞER” değil, direkt açıklamayı tür yaptık
+      state.records.push(rec);
+      added.push(rec);
+    }
+    // kişi listesine ekle (yoksa)
+    const uniqPeople = new Set(state.people);
+    uniqPeople.add(defaultPerson.toUpperCase());
+    state.people = Array.from(uniqPeople);
+
+    // meta & kaydet & render
+    state.__meta = { updatedAt: Date.now(), clientId: (state.__meta && state.__meta.clientId) || "" };
+    save(); renderAll();
+
+    // buluta gönder (varsa)
+    try { if(typeof schedulePush === "function") schedulePush(); } catch {}
+
+    alert(`${added.length} kayıt eklendi.`);
+  }
+
+  const fileInput = document.getElementById("excelFile");
+  const personInp = document.getElementById("excelPerson");
+  const btnImport = document.getElementById("btnExcelImport");
+  if(fileInput && personInp && btnImport){
+    btnImport.addEventListener("click", ()=>{
+      const f = fileInput.files && fileInput.files[0];
+      if(!f) return alert("Excel dosyası seçin (.xls/.xlsx/.csv)");
+      const who = (personInp.value||"").trim();
+      if(!who) return alert("Bu dosya hangi kişi için? (örn: AKSU)");
+      importExcel(f, who);
+    });
+  }
+})();
+
         </script>
     </body>
+        <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </html>
+
