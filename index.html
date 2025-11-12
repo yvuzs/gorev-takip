@@ -589,73 +589,74 @@
                     tbl.innerHTML = head + '<tbody>' + siraRow + rows + '</tbody>';
                 }
 
-                function renderDiger() {
-                    const head = `
-                              <thead>
-                                <tr>
-                                  <th><span class="pill">DİĞER GÖREVLER</span></th>
-                                  ${state.people.map(p => `<th><span class="pill">${p}</span></th>`).join('')}
-                                </tr>
-                              </thead>`;
+                function renderDiger(){
+    // Personel sütunlarını toplam DİĞER görevlerine göre sırala (az solda, çok sağda)
+    const totalCounts = new Map(state.people.map(p => [p, 0]));
+    state.records.forEach(r => {
+        if (r.type === OTHER_TYPE) {
+            totalCounts.set(r.person, (totalCounts.get(r.person) || 0) + 1);
+        }
+    });
 
-                    const totals = new Map(state.people.map(p => [p, 0]));
-                    const taskRows = state.digerTasks.map(task => {
-                        const cells = state.people.map(p => {
-                            const c = state.records.filter(r => r.type === OTHER_TYPE && r.digerTask === task && r.person === p).length;
-                            totals.set(p, (totals.get(p) || 0) + c);
-                            return `<td>${c || 0}</td>`;
-                        }).join('');
-                        return `<tr><td><span class="kbadge">${task}</span></td>${cells}</tr>`;
-                    }).join('');
+    const orderedPeople = state.people.slice().sort((a, b) => {
+        const ca = totalCounts.get(a) || 0;
+        const cb = totalCounts.get(b) || 0;
+        if (ca !== cb) return ca - cb;
+        return a.localeCompare(b);
+    });
 
-                    const next = suggest(OTHER_TYPE) || '-';
-                    const siraRow = `
-                              <tr>
-                                <td class="muted small">Sıra</td>
-                                <td colspan="${state.people.length}" style="text-align:left">
-                                  <span class="pill">${next}</span> <span class="muted small">— DİĞER için öneri</span>
-                                </td>
-                              </tr>`;
+    // Başlık
+    const head = `<thead><tr>
+        <th><span class="pill">DİĞER GÖREVLER</span></th>
+        <th><span class="pill">SIRA</span></th>
+        ${orderedPeople.map(p => `<th><span class="pill">${p}</span></th>`).join('')}
+    </tr></thead>`;
 
-                    const toplamRow = `
-                              <tr>
-                                <td><b>TOPLAM</b></td>
-                                ${state.people.map(p => `<td><b>${totals.get(p) || 0}</b></td>`).join('')}
-                              </tr>`;
+    // Satırlar
+    const bodyRows = state.digerTasks.map(task => {
+        const mode = document.querySelector('input[name=mode]:checked').value;
+        let next;
+        if (mode === 'rr') next = nextRRForTask(task);
+        else if (mode === 'idle') next = nextIdleForTask(task);
+        else next = nextMinForTask(task);
 
-                    $('#digerTable').innerHTML = head + '<tbody>' + siraRow + toplamRow + taskRows + '</tbody>';
+        const cells = orderedPeople.map(p => {
+            const c = state.records.filter(r =>
+                r.type === OTHER_TYPE &&
+                r.digerTask === task &&
+                r.person === p
+            ).length;
+            return `<td>${c || 0}</td>`;
+        }).join('');
 
-                    // DİĞER görev chip'leri (ekle/sil)
-                    const dc = $('#digerTaskChips'); dc.innerHTML = '';
-                    state.digerTasks.forEach(t => {
-                        const w = document.createElement('span'); w.className = 'chip';
-                        w.innerHTML = `<span>${t}</span>`;
-                        const d = document.createElement('button'); d.className = 'btn small'; d.textContent = 'Sil';
-                        d.onclick = () => {
-                            if (state.digerTasks.length <= 1) return alert('En az bir DİĞER görevi kalmalı.');
-                            if (!confirm(`${t} silinsin mi?`)) return;
-                            state.digerTasks = state.digerTasks.filter(x => x !== t);
-                            bumpMeta(); save(); renderAll(); schedulePush();
-                        };
-                        w.appendChild(d); dc.appendChild(w);
-                    });
+        return `<tr><td><span class="kbadge">${task}</span></td><td><span class="pill">${next || '-'}</span></td>${cells}</tr>`;
+    }).join('');
 
-                    // Üstteki alt-kategori select'i doldur
-                    $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t => `<option>${t}</option>`).join('');
+    $('#digerTable').innerHTML = head + '<tbody>' + bodyRows + '</tbody>';
 
-                    // DİĞER panelindeki personel chip'leri (kısayol)
-                    const pc2 = $('#peopleChips2'); pc2.innerHTML = '';
-                    state.people.forEach(p => {
-                        const w = document.createElement('span'); w.className = 'chip';
-                        w.innerHTML = `<span>${p}</span>`;
-                        const d = document.createElement('button'); d.className = 'btn small'; d.textContent = 'Sil';
-                        d.onclick = () => {
-                            if (!confirm(`${p} silinsin mi?`)) return;
-                            state.people = state.people.filter(x => x !== p); bumpMeta(); save(); renderAll(); schedulePush();
-                        };
-                        w.appendChild(d); pc2.appendChild(w);
-                    });
-                }
+    // Chip ve select kısmını koru
+    const dc = $('#digerTaskChips'); dc.innerHTML = '';
+    state.digerTasks.forEach(t=>{
+        const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${t}</span>`;
+        const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+        d.onclick = ()=>{
+            if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
+            if(!confirm(`${t} silinsin mi?`)) return;
+            state.digerTasks = state.digerTasks.filter(x=>x!==t);
+            bumpMeta(); save(); renderAll(); schedulePush();
+        };
+        w.appendChild(d); dc.appendChild(w);
+    });
+    $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+    const pc2 = $('#peopleChips2'); pc2.innerHTML='';
+    state.people.forEach(p=>{
+        const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${p}</span>`;
+        const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+        d.onclick = ()=>{ if(!confirm(`${p} silinsin mi?`)) return; state.people = state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush(); };
+        w.appendChild(d); pc2.appendChild(w);
+    });
+}
+
 
                 function renderListsAndLog() {
                     $('#taskType').innerHTML = state.types.map(t => `<option>${t}</option>`).join('');
@@ -850,6 +851,7 @@
 </script>
 </body>
 </html>
+
 
 
 
