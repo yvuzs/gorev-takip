@@ -360,55 +360,92 @@
             }
 
             function renderDiger(){
-                // HEAD: Diğer Görevler | Sıra | people...
-                const head = `<thead><tr>
-                    <th><span class="pill">DİĞER GÖREVLER</span></th>
-                    <th><span class="pill">SIRA</span></th>
-                    ${state.people.map(p=>`<th><span class="pill">${p}</span></th>`).join('')}
-                </tr></thead>`;
+  // --- yardımcılar ---
+  const isOther = r => {
+    const t = (r.type || '').toUpperCase();
+    return t === (OTHER_TYPE||'').toUpperCase() || t === 'DİĞER' || t === 'DIGER';
+  };
+  const w = r => (typeof weightOfRecord === 'function' ? weightOfRecord(r) : (Number(r.points)||1));
 
-                // Body rows per task
-                const bodyRows = state.digerTasks.map(task => {
-                    // öneri bu görev özelinde
-                    const mode = document.querySelector('input[name=mode]:checked').value;
-                    let next;
-                    if(mode==='rr') next = nextRRForTask(task);
-                    else if(mode==='idle') next = nextIdleForTask(task);
-                    else next = nextMinForTask(task);
+  // 1) TOPLAM DİĞER PUANINA göre personel sütun sırası
+  const totals = new Map(state.people.map(p => [p, 0]));
+  state.records.forEach(r => {
+    if (isOther(r)) totals.set(r.person, (totals.get(r.person)||0) + w(r));
+  });
+  const orderedPeople = state.people.slice().sort((a,b)=>{
+    const da = totals.get(a)||0, db = totals.get(b)||0;
+    if (da !== db) return da - db;      // az solda, çok sağda
+    return a.localeCompare(b);
+  });
 
-                    const cells = state.people.map(p => {
-                        const c = state.records.filter(r => r.type===OTHER_TYPE && r.digerTask===task && r.person===p).length;
-                        return `<td>${c||0}</td>`;
-                    }).join('');
+  // 2) Başlık
+  const head = `<thead><tr>
+      <th><span class="pill">DİĞER GÖREVLER</span></th>
+      <th><span class="pill">SIRA</span></th>
+      ${orderedPeople.map(p=>`<th><span class="pill">${p}</span></th>`).join('')}
+    </tr></thead>`;
 
-                    const siraCell = `<td><span class="pill">${next || '-'}</span></td>`;
-                    return `<tr><td><span class="kbadge">${task}</span></td>${siraCell}${cells}</tr>`;
-                }).join('');
+  // 3) Satırlar (her görev için)
+  const bodyRows = state.digerTasks.map(task => {
+    // görev özelinde öneri
+    const mode = document.querySelector('input[name=mode]:checked').value;
+    let next;
+    if (mode==='rr') next = nextRRForTask(task);
+    else if (mode==='idle') next = nextIdleForTask(task);
+    else next = nextMinForTask(task);
 
-                $('#digerTable').innerHTML = head + '<tbody>' + bodyRows + '</tbody>';
+    // hücreler: orderedPeople ile aynı sırada ve PUAN toplamı
+    const cells = orderedPeople.map(p => {
+      const sum = state.records.reduce((acc, r) => {
+        if (isOther(r) && r.digerTask === task && r.person === p) {
+          return acc + w(r);
+        }
+        return acc;
+      }, 0);
+      return `<td>${sum || 0}</td>`;
+    }).join('');
 
-                // chips & selects same as v16
-                const dc = $('#digerTaskChips'); dc.innerHTML = '';
-                state.digerTasks.forEach(t=>{
-                    const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${t}</span>`;
-                    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-                    d.onclick = ()=>{
-                        if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
-                        if(!confirm(`${t} silinsin mi?`)) return;
-                        state.digerTasks = state.digerTasks.filter(x=>x!==t);
-                        bumpMeta(); save(); renderAll(); schedulePush();
-                    };
-                    w.appendChild(d); dc.appendChild(w);
-                });
-                $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
-                const pc2 = $('#peopleChips2'); pc2.innerHTML='';
-                state.people.forEach(p=>{
-                    const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${p}</span>`;
-                    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-                    d.onclick = ()=>{ if(!confirm(`${p} silinsin mi?`)) return; state.people = state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush(); };
-                    w.appendChild(d); pc2.appendChild(w);
-                });
-            }
+    return `<tr>
+      <td><span class="kbadge">${task}</span></td>
+      <td><span class="pill">${next || '-'}</span></td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  // 4) Tabloyu bas
+  $('#digerTable').innerHTML = head + '<tbody>' + bodyRows + '</tbody>';
+
+  // 5) (v17’deki ekle/sil UI’sini koru)
+  const dc = $('#digerTaskChips'); dc.innerHTML = '';
+  state.digerTasks.forEach(t=>{
+    const wChip = document.createElement('span');
+    wChip.className = 'chip';
+    wChip.innerHTML = `<span>${t}</span>`;
+    const del = document.createElement('button');
+    del.className = 'btn small';
+    del.textContent = 'Sil';
+    del.onclick = ()=>{
+      if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
+      if(!confirm(`${t} silinsin mi?`)) return;
+      state.digerTasks = state.digerTasks.filter(x=>x!==t);
+      bumpMeta(); save(); renderAll(); if (typeof schedulePush==='function') schedulePush();
+    };
+    wChip.appendChild(del);
+    dc.appendChild(wChip);
+  });
+  $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+  const pc2 = $('#peopleChips2'); pc2.innerHTML='';
+  state.people.forEach(p=>{
+    const wChip = document.createElement('span');
+    wChip.className='chip';
+    wChip.innerHTML=`<span>${p}</span>`;
+    const del=document.createElement('button');
+    del.className='btn small';
+    del.textContent='Sil';
+    del.onclick = ()=>{ if(!confirm(`${p} silinsin mi?`)) return; state.people = state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); if (typeof schedulePush==='function') schedulePush(); };
+    wChip.appendChild(del); pc2.appendChild(wChip);
+  });
+}
 
             function renderListsAndLog(){
                 $('#taskType').innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
@@ -594,3 +631,4 @@
         </script>
     </body>
 </html>
+
