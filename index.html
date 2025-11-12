@@ -52,7 +52,6 @@
   .score-box.active{box-shadow:0 0 0 2px #fff inset;opacity:1;transform:translateY(-1px)}
   .score-label{display:block;margin-top:6px;text-align:center;color:#cbd5e1}
 
-  /* Tab buton grubu */
   .tab-group{display:flex;gap:6px}
   .tab-btn{border:1px solid #334155;background:#0b1220;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
   .tab-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
@@ -69,10 +68,11 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Görev Takibi <span class="muted"></span></h1>
+    <h1>Görev Takibi</h1>
     <div class="grid">
       <div class="card">
         <h2>Yeni Kayıt</h2>
+
         <div class="row">
           <div>
             <label>Görev Türü</label>
@@ -83,6 +83,7 @@
             <select id="personSelect"></select>
           </div>
         </div>
+
         <div class="row">
           <div>
             <label>Başlangıç Tarihi</label>
@@ -94,8 +95,16 @@
           </div>
         </div>
 
+        <!-- DİĞER alanları -->
         <div id="otherWrap" style="display:none">
-          <label>Diğer Görev Puanı (1–5) & Açıklama</label>
+          <label>DİĞER Görev Türü</label>
+          <div class="row">
+            <select id="digerTaskSelect"></select>
+            <input id="digerTaskNew" type="text" placeholder="Yeni DİĞER görevi (örn. GOREV3)">
+            <button class="btn" id="btnAddDigerTask">Ekle</button>
+          </div>
+
+          <label>Puan (1–5) & Açıklama</label>
           <div class="score-picker" id="scorePicker">
             <div class="score-box" data-val="1" style="background:#fff7b2"></div>
             <div class="score-box" data-val="2" style="background:#ffe44d"></div>
@@ -106,7 +115,7 @@
           <span class="score-label" id="scoreLabel">Seçili: 1</span>
           <input id="pointsInput" type="hidden" value="1" />
           <div class="row" style="margin-top:8px">
-            <input id="noteInput" type="text" placeholder="Açıklama (ör. eğitim desteği, evrak dağıtımı...)" />
+            <input id="noteInput" type="text" placeholder="Açıklama (opsiyonel)" />
           </div>
         </div>
 
@@ -126,6 +135,7 @@
           <summary>Personel ve Tür Listeleri</summary>
           <div class="row"><input id="newPerson" type="text" placeholder="Yeni personel adı" /><button class="btn" id="btnAddPerson">Ekle</button></div>
           <div class="stack" id="peopleChips"></div>
+
           <label>Görev Türleri</label>
           <div class="stack" id="typeChips"></div>
           <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="btnAddType">Ekle</button></div>
@@ -158,9 +168,19 @@
         <!-- ÖZET TABLO -->
         <div id="summaryWrap" style="overflow:auto; max-height:420px"><table id="summaryTable"></table></div>
 
-        <!-- DİĞER TABLO -->
+        <!-- DİĞER TABLO (matris: satırlar=DİĞER görevleri, sütunlar=personel) -->
         <div id="digerWrap" style="display:none; overflow:auto; max-height:420px">
           <table id="digerTable"></table>
+
+          <details style="margin-top:10px">
+            <summary>DİĞER – görev ve personel listelerini düzenle</summary>
+            <label>DİĞER Görevleri</label>
+            <div class="stack" id="digerTaskChips"></div>
+            <div class="row"><input id="digerTaskNew2" type="text" placeholder="Yeni DİĞER görevi"><button class="btn" id="btnAddDigerTask2">Ekle</button></div>
+
+            <label style="margin-top:10px">Personel (kısa yol)</label>
+            <div class="stack" id="peopleChips2"></div>
+          </details>
         </div>
 
         <h3 style="text-align:center">Kayıtlar</h3>
@@ -172,15 +192,15 @@
 <script>
 (function(){
   /* ===== Helpers & IDs ===== */
-  const LS_KEY='gorevTakip_v10';
+  const LS_KEY='gorevTakip_v11';
   const OTHER_TYPE='DIGER';
   const daysWeighted=new Set(["112-HABER MERKEZI","GAMER"]);
   const $=s=>document.querySelector(s);
   const today=()=>new Date().toISOString().slice(0,10);
   const DEFAULT_WORKER='https://blue-violet-32c9.retkitselim.workers.dev/';
-  const UI_KEY=LS_KEY+'__ui';   // aktif tablo görünümü için
+  const UI_KEY=LS_KEY+'__ui';
 
-  // Benzersiz istemci kimliği
+  // client id
   function ensureClientId(){
     let id=localStorage.getItem(LS_KEY+'__clientId');
     if(!id){ id='c-'+Math.random().toString(36).slice(2)+Date.now(); localStorage.setItem(LS_KEY+'__clientId',id); }
@@ -192,19 +212,25 @@
   let state;
   try{ state=JSON.parse(localStorage.getItem(LS_KEY)||'null') }catch{ state=null }
   if(!state){
-    state={ people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK","SAGLAM"],
-            types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
-            records:[], lastByType:{}, __meta:{updatedAt:Date.now(), clientId:CLIENT_ID} };
+    state={
+      people:["ATAL","KAVAKLI","YAMAN","AKSU","GORMEZ","TURGAY","ERDIK","SAGLAM"],
+      types:["112-HABER MERKEZI","GAMER","MAC","GOCMEN","DIGER"],
+      digerTasks:["GOREV1","GOREV2"],          // <<< DİĞER görev satırları
+      records:[],
+      lastByType:{},
+      __meta:{updatedAt:Date.now(), clientId:CLIENT_ID}
+    };
   } else {
     state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
+    state.digerTasks=state.digerTasks||["GOREV1","GOREV2"];
   }
   const save=()=>localStorage.setItem(LS_KEY,JSON.stringify(state));
-  function bumpMeta(){ state.__meta={updatedAt:Date.now(), clientId:CLIENT_ID}; }
+  const bumpMeta=()=>{ state.__meta={updatedAt:Date.now(),clientId:CLIENT_ID}; };
 
-  /* ===== Weights / Counters ===== */
+  /* ===== Counters ===== */
   function weightOfRecord(r){
     if(daysWeighted.has(r.type)) return Math.max(1, Number(r.days)||1);
-    if(r.type===OTHER_TYPE)     return Math.max(1, Math.min(5, Number(r.points)||1));
+    if(r.type===OTHER_TYPE)     return Math.max(1, Math.min(5, Number(r.points||1)));
     return 1;
   }
   function countsBy(type){
@@ -240,7 +266,7 @@
     return nextMin(type);
   }
 
-  /* ===== UI helpers ===== */
+  /* ===== UI state ===== */
   let currentView = (JSON.parse(localStorage.getItem(UI_KEY)||'{}').view) || 'summary';
   function setView(v){
     currentView=v;
@@ -257,7 +283,6 @@
   function toggleOtherInputs(){
     const show=$('#taskType').value===OTHER_TYPE;
     $('#otherWrap').style.display= show? 'block':'none';
-    // DIGER seçilince otomatik DIGER görünümü
     if (show) setView('diger'); else if (currentView==='diger') setView('summary');
   }
   function initScorePicker(){
@@ -273,7 +298,7 @@
     (boxes[0]||{}).click?.();
   }
 
-  /* ===== Render: SUMMARY ===== */
+  /* ===== Render SUMMARY ===== */
   function renderSummary(){
     const types=state.types; const tbl=$('#summaryTable');
     const head='<thead><tr><th><span class="pill">PERSONEL</span></th>'+types.map(t=>`<th><span class="pill">${t}</span></th>`).join('')+'<th><span class="pill">TOPLAM</span></th></tr></thead>';
@@ -286,60 +311,73 @@
         const tot   = cells.reduce((a, b) => a + b, 0);
         return { p, cells, tot };
       })
-      .sort((a, b) => a.tot - b.tot) // azdan çoğa
+      .sort((a, b) => a.tot - b.tot)
       .map(obj => `<tr><td><span class="kbadge">${obj.p}</span></td>${obj.cells.map(c => `<td>${c}</td>`).join('')}<td><b>${obj.tot}</b></td></tr>`)
       .join('');
 
     tbl.innerHTML=head+'<tbody>'+siraRow+rows+'</tbody>';
   }
 
-  /* ===== Render: DIGER TABLE ===== */
+  /* ===== Render DİĞER (MATRİS) ===== */
   function renderDiger(){
-    const tbl=$('#digerTable');
-
-    // Kişi bazında: ADET ve PUAN TOPLAM + SON NOT
-    const base = new Map(state.people.map(p=>[p,{count:0,points:0,lastNote:''}]));
-    state.records.forEach(r=>{
-      if(r.type!==OTHER_TYPE) return;
-      const o = base.get(r.person) || {count:0,points:0,lastNote:''};
-      o.count  += 1;
-      o.points += Math.max(1, Math.min(5, Number(r.points||1)));
-      if((r.note||'').trim()) o.lastNote = r.note.trim(); // en son girilen not
-      base.set(r.person, o);
-    });
-
+    // Başlık: ilk boş hücre + personel sütun başlıkları
     const head = `
       <thead>
         <tr>
-          <th><span class="pill">PERSONEL</span></th>
-          <th><span class="pill">ADET</span></th>
-          <th><span class="pill">PUAN TOPLAM</span></th>
-          <th><span class="pill">SON NOT</span></th>
+          <th><span class="pill">DİĞER GÖREVLER</span></th>
+          ${state.people.map(p=>`<th><span class="pill">${p}</span></th>`).join('')}
         </tr>
       </thead>`;
 
-    const rows = state.people
-      .map(p => ({ p, ...(base.get(p)||{count:0,points:0,lastNote:''}) }))
-      .sort((a,b)=> a.points - b.points) // az puan yapan üste
-      .map(o => `<tr>
-        <td><span class="kbadge">${o.p}</span></td>
-        <td>${o.count}</td>
-        <td><b>${o.points}</b></td>
-        <td style="text-align:left">${(o.lastNote||'').slice(0,60)}</td>
-      </tr>`)
-      .join('');
+    // Hücre değeri: seçili digerTask & person için KAÇ kayıt var (count)
+    const rows = state.digerTasks.map(task => {
+      const cells = state.people.map(p => {
+        const c = state.records.filter(r => r.type===OTHER_TYPE && r.digerTask===task && r.person===p).length;
+        return `<td>${c||0}</td>`;
+      }).join('');
+      return `<tr><td><span class="kbadge">${task}</span></td>${cells}</tr>`;
+    }).join('');
 
-    tbl.innerHTML = head + '<tbody>'+ rows +'</tbody>';
+    $('#digerTable').innerHTML = head + '<tbody>'+ rows +'</tbody>';
+
+    // DİĞER görev chip'leri (ekle/sil)
+    const dc=$('#digerTaskChips'); dc.innerHTML='';
+    state.digerTasks.forEach(t=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${t}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(state.digerTasks.length<=1) return alert('En az bir DİĞER görevi kalmalı.');
+        if(!confirm(`${t} silinsin mi?`)) return;
+        state.digerTasks = state.digerTasks.filter(x=>x!==t);
+        // ilgili kayıtları silmiyoruz; kalanlar tabloda görünmez
+        bumpMeta(); save(); renderAll(); schedulePush();
+      };
+      w.appendChild(d); dc.appendChild(w);
+    });
+
+    // DİĞER görev seçimi listesi
+    $('#digerTaskSelect').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+
+    // DİĞER panelindeki personel chip'leri (kısayol)
+    const pc2=$('#peopleChips2'); pc2.innerHTML='';
+    state.people.forEach(p=>{
+      const w=document.createElement('span'); w.className='chip';
+      w.innerHTML=`<span>${p}</span>`;
+      const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
+      d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return;
+        state.people=state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush();
+      };
+      w.appendChild(d); pc2.appendChild(w);
+    });
   }
 
-  /* ===== Render: COMMON ===== */
+  /* ===== Render ortak (listeler + log) ===== */
   function renderListsAndLog(){
-    // dropdownlar
     $('#taskType').innerHTML=state.types.map(t=>`<option>${t}</option>`).join('');
     $('#personSelect').innerHTML=state.people.map(p=>`<option>${p}</option>`).join('');
     if(!$('#startDate').value) $('#startDate').value=today();
 
-    // chips
+    // Ana personel & tür yönetimi
     const pc=$('#peopleChips'); pc.innerHTML='';
     state.people.forEach(p=>{
       const w=document.createElement('span'); w.className='chip';
@@ -363,13 +401,13 @@
       w.appendChild(d); tc.appendChild(w);
     });
 
-    // log
+    // Log
     const log=$('#logTable');
     log.innerHTML='<thead><tr><th><span class="pill">BAŞLANGIÇ</span></th><th><span class="pill">BİTİŞ</span></th><th><span class="pill">TÜR</span></th><th><span class="pill">KİŞİ</span></th><th><span class="pill">PUAN</span></th><th><span class="pill">AÇIKLAMA</span></th><th></th></tr></thead><tbody>'+
       state.records.slice().reverse().map((r,i)=>{
         const idx=state.records.length-1-i;
         const p=(r.type===OTHER_TYPE)?(r.points||''):''; const note=(r.type===OTHER_TYPE)?(r.note||''):'';
-        return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}</td><td>${r.person}</td><td>${p}</td><td>${note}</td>
+        return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}${r.digerTask?` / ${r.digerTask}`:''}</td><td>${r.person}</td><td>${p}</td><td>${note}</td>
           <td><button class="btn small" data-del="${idx}">Sil</button></td></tr>`;
       }).join('')+'</tbody>';
     log.querySelectorAll('button[data-del]').forEach(b=>b.onclick=()=>{
@@ -383,8 +421,8 @@
     renderListsAndLog();
     renderSummary();
     renderDiger();
-    toggleOtherInputs();   // DIGER seçiliyse görünüm ayarla
-    setView(currentView);  // sekme durumunu uygula
+    toggleOtherInputs();
+    setView(currentView);
   }
 
   /* ===== Actions ===== */
@@ -401,15 +439,31 @@
 
     const rec={type,person,start:s,end:end,days};
     if(type===OTHER_TYPE){
+      rec.digerTask = ($('#digerTaskSelect').value||'').trim();
+      if(!rec.digerTask){ return alert('DİĞER görevi seçin/ekleyin.'); }
       rec.points=Math.max(1,Math.min(5,Number($('#pointsInput').value||'1')));
       rec.note=($('#noteInput').value||'').trim();
       $('#noteInput').value='';
-      setView('diger'); // DIGER kaydı eklenince DIGER görünümüne geç
+      setView('diger');
     }
     state.records.push(rec);
     state.lastByType[type]=person;
     bumpMeta(); save(); renderAll(); schedulePush();
   };
+
+  // DİĞER görev ekleme (iki yerdeki buton aynı işlemi yapar)
+  function addDigerTaskFrom(inputId){
+    const v=$(inputId).value.trim();
+    if(v && !state.digerTasks.includes(v)){
+      state.digerTasks.push(v);
+      $(inputId).value='';
+      bumpMeta(); save(); renderAll(); schedulePush();
+      // yeni eklenen otomatik seçilsin
+      $('#digerTaskSelect').value=v;
+    }
+  }
+  $('#btnAddDigerTask').onclick=()=>addDigerTaskFrom('#digerTaskNew');
+  $('#btnAddDigerTask2').onclick=()=>addDigerTaskFrom('#digerTaskNew2');
 
   $('#btnReset').onclick=()=>{ if(confirm('Tüm veriler silinsin mi?')){ localStorage.removeItem(LS_KEY); location.reload(); } };
 
@@ -426,15 +480,16 @@
     const t=await f.text(); const data=JSON.parse(t);
     if(!data.people||!data.types||!Array.isArray(data.records)) throw new Error('Şema hatalı');
     state=data; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
+    state.digerTasks=state.digerTasks||["GOREV1","GOREV2"];
     save(); renderAll(); schedulePush();
   }catch(err){ alert('İçe aktarım hatası: '+err.message); } };
   document.querySelectorAll('#modeRadios input[name=mode]').forEach(r=>r.onchange=()=>{ renderAll(); $('#btnSuggest').click(); });
 
-  // Tab butonları
+  // Sekmeler
   $('#tabSummary').onclick=()=>setView('summary');
   $('#tabDiger').onclick=()=>setView('diger');
 
-  // Bulut URL yükle
+  // Cloud URL
   try{ const c=JSON.parse(localStorage.getItem(LS_KEY+'__cloud')||'{}'); $('#cloudUrl').value=c.url||DEFAULT_WORKER; }catch{ $('#cloudUrl').value=DEFAULT_WORKER; }
 
   // İlk render
@@ -446,46 +501,39 @@
   function schedulePush(){
     if(pushDebounce) clearTimeout(pushDebounce);
     pushDebounce=setTimeout(async()=>{
-      try{ await cloudPush(); /* sessiz */ }
-      catch(e){ console.warn('Senkron hatası:', e); }
+      try{ await cloudPush(); }catch(e){ console.warn('Senkron hatası:', e); }
       finally{ pushDebounce=null; }
     }, 600);
   }
-
   async function cloudPush(){
     const url=$('#cloudUrl').value.trim(); if(!url) return;
     const res=await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ data: state }) });
-    const j=await res.json();
-    if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
+    const j=await res.json(); if(!res.ok||!j.ok) throw new Error(j.error||'Buluta gönderilemedi');
     return true;
   }
-
   async function cloudPull(){
     if(pulling) return; pulling=true;
     try{
       const url=$('#cloudUrl').value.trim(); if(!url) return;
       const res=await fetch(url,{cache:'no-store'}); const j=await res.json();
-      if(!res.ok || !j || !j.ok){ return; }
-
-      const cloud=j.data||{}; const cloudSha=j.sha||null;
-      const localMeta=state.__meta||{updatedAt:0}; const cloudMeta=cloud.__meta||{updatedAt:0};
-
+      if(!res.ok||!j||!j.ok) return;
+      const cloud=j.data||{}, cloudSha=j.sha||null;
+      const localMeta=state.__meta||{updatedAt:0}, cloudMeta=cloud.__meta||{updatedAt:0};
       if(cloudSha!==lastSeenSha && (cloudMeta.updatedAt>localMeta.updatedAt)){
         state=cloud; state.__meta=state.__meta||{updatedAt:Date.now(),clientId:CLIENT_ID};
+        state.digerTasks=state.digerTasks||["GOREV1","GOREV2"];
         save(); renderAll();
       }
-      lastSeenSha = cloudSha;
-    }catch(e){ /* sessiz */ } finally{ pulling=false; }
+      lastSeenSha=cloudSha;
+    }catch(e){} finally{ pulling=false; }
   }
-
-  cloudPull();
-  setInterval(cloudPull, 10000);
+  cloudPull(); setInterval(cloudPull,10000);
   document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') cloudPull(); });
   window.addEventListener('online', cloudPull);
   $('#cloudUrl').addEventListener('change', ()=>{ localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl').value.trim()})); cloudPull(); });
 
-  // SW kaydı (network-first HTML + auto reload yapısına uygun)
-  if ('serviceWorker' in navigator) {
+  /* ===== Service Worker (network-first HTML + auto reload) ===== */
+  if('serviceWorker' in navigator){
     window.addEventListener('load', async () => {
       try {
         const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
