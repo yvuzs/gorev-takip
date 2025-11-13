@@ -481,39 +481,106 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
 }
 
             function renderListsAndLog(){
-                $('#taskType').innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
-                $('#personSelect').innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
-                if(!$('#startDate').value) $('#startDate').value = today();
+    // --- ÖNCEKİ SEÇİMLERİ HATIRLA ---
+    const prevTypeEl   = document.querySelector('#taskType');
+    const prevPersonEl = document.querySelector('#personSelect');
+    const prevType     = prevTypeEl   ? prevTypeEl.value   : '';
+    const prevPerson   = prevPersonEl ? prevPersonEl.value : '';
 
-                const pc=$('#peopleChips'); pc.innerHTML='';
-                state.people.forEach(p=>{
-                    const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${p}</span>`;
-                    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-                    d.onclick=()=>{ if(!confirm(`${p} silinsin mi?`)) return; state.people = state.people.filter(x=>x!==p); bumpMeta(); save(); renderAll(); schedulePush(); };
-                    w.appendChild(d); pc.appendChild(w);
-                });
+    // --- GÖREV TÜRÜ LİSTESİ ---
+    const typeSelect = document.querySelector('#taskType');
+    typeSelect.innerHTML = state.types.map(t=>`<option>${t}</option>`).join('');
 
-                const tc=$('#typeChips'); tc.innerHTML='';
-                state.types.forEach(t=>{
-                    const w=document.createElement('span'); w.className='chip'; w.innerHTML=`<span>${t}</span>`;
-                    const d=document.createElement('button'); d.className='btn small'; d.textContent='Sil';
-                    d.onclick=()=>{ if(state.types.length<=1) return alert('En az bir tür kalmalı.'); if(!confirm(`${t} silinsin mi?`)) return; state.types = state.types.filter(x=>x!==t); bumpMeta(); save(); renderAll(); schedulePush(); };
-                    w.appendChild(d); tc.appendChild(w);
-                });
+    if (prevType && state.types.includes(prevType)) {
+        typeSelect.value = prevType;          // önceki türü koru (örn: DIGER)
+    } else if (state.types.length) {
+        typeSelect.value = state.types[0];    // yoksa ilkini seç
+    }
 
-                const log=$('#logTable');
-                log.innerHTML = '<thead><tr><th><span class="pill">BAŞLANGIÇ</span></th><th><span class="pill">BİTİŞ</span></th><th><span class="pill">TÜR</span></th><th><span class="pill">KİŞİ</span></th><th><span class="pill">PUAN</span></th><th><span class="pill">AÇIKLAMA</span></th><th></th></tr></thead><tbody>' +
-                    state.records.slice().reverse().map((r,i)=>{
-                        const idx = state.records.length-1-i;
-                        const p = (r.type===OTHER_TYPE) ? (r.points||'') : '';
-                        const note = (r.type===OTHER_TYPE) ? (r.note||'') : '';
-                        return `<tr><td>${r.start}</td><td>${r.end}</td><td>${r.type}${r.digerTask ? ` / ${r.digerTask}` : ''}</td><td>${r.person}</td><td>${p}</td><td>${note}</td><td><button class="btn small" data-del="${idx}">Sil</button></td></tr>`;
-                    }).join('') + '</tbody>';
-                log.querySelectorAll('button[data-del]').forEach(b=> b.onclick=()=>{
-                    const idx=+b.getAttribute('data-del');
-                    state.records.splice(idx,1); bumpMeta(); save(); renderAll(); schedulePush();
-                });
-            }
+    // --- PERSONEL LİSTESİ ---
+    const personSelect = document.querySelector('#personSelect');
+    personSelect.innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
+
+    if (prevPerson && state.people.includes(prevPerson)) {
+        personSelect.value = prevPerson;      // önceki kişiyi koru
+    } else if (state.people.length) {
+        personSelect.value = state.people[0];
+    }
+
+    // --- TARİH ---
+    if (!document.querySelector('#startDate').value) {
+        document.querySelector('#startDate').value = today();
+    }
+
+    // --- PERSONEL CHIP'LERİ ---
+    const pc = document.querySelector('#peopleChips'); 
+    pc.innerHTML='';
+    state.people.forEach(p=>{
+        const w=document.createElement('span'); 
+        w.className='chip'; 
+        w.innerHTML=`<span>${p}</span>`;
+        const d=document.createElement('button'); 
+        d.className='btn small'; 
+        d.textContent='Sil';
+        d.onclick=()=>{
+            if(!confirm(`${p} silinsin mi?`)) return;
+            state.people = state.people.filter(x=>x!==p);
+            bumpMeta(); save(); renderAll(); if (typeof schedulePush==='function') schedulePush();
+        };
+        w.appendChild(d); pc.appendChild(w);
+    });
+
+    // --- TÜR CHIP'LERİ ---
+    const tc = document.querySelector('#typeChips'); 
+    tc.innerHTML='';
+    state.types.forEach(t=>{
+        const w=document.createElement('span'); 
+        w.className='chip'; 
+        w.innerHTML=`<span>${t}</span>`;
+        const d=document.createElement('button'); 
+        d.className='btn small'; 
+        d.textContent='Sil';
+        d.onclick=()=>{
+            if(state.types.length<=1) return alert('En az bir tür kalmalı.');
+            if(!confirm(`${t} silinsin mi?`)) return;
+            state.types = state.types.filter(x=>x!==t);
+            bumpMeta(); save(); renderAll(); if (typeof schedulePush==='function') schedulePush();
+        };
+        w.appendChild(d); tc.appendChild(w);
+    });
+
+    // --- KAYIT TABLOSU ---
+    const log=document.querySelector('#logTable');
+    log.innerHTML =
+      '<thead><tr>' +
+      '<th><span class="pill">BAŞLANGIÇ</span></th>' +
+      '<th><span class="pill">BİTİŞ</span></th>' +
+      '<th><span class="pill">TÜR</span></th>' +
+      '<th><span class="pill">KİŞİ</span></th>' +
+      '<th><span class="pill">PUAN</span></th>' +
+      '<th><span class="pill">AÇIKLAMA</span></th>' +
+      '<th></th></tr></thead><tbody>' +
+      state.records.slice().reverse().map((r,i)=>{
+          const idx = state.records.length-1-i;
+          const p   = (r.type===OTHER_TYPE) ? (r.points||'') : '';
+          const note= (r.type===OTHER_TYPE) ? (r.note||'')   : '';
+          return `<tr>
+              <td>${r.start}</td>
+              <td>${r.end}</td>
+              <td>${r.type}${r.digerTask ? ` / ${r.digerTask}` : ''}</td>
+              <td>${r.person}</td>
+              <td>${p}</td>
+              <td>${note}</td>
+              <td><button class="btn small" data-del="${idx}">Sil</button></td>
+          </tr>`;
+      }).join('') + '</tbody>';
+
+    log.querySelectorAll('button[data-del]').forEach(b=> b.onclick=()=>{
+        const idx=+b.getAttribute('data-del');
+        state.records.splice(idx,1);
+        bumpMeta(); save(); renderAll(); if (typeof schedulePush==='function') schedulePush();
+    });
+}
 
             function renderAll(){
                 localStorage.setItem(LS_KEY+'__cloud', JSON.stringify({url: $('#cloudUrl')?.value || ''}));
@@ -664,5 +731,6 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
         </script>
     </body>
 </html>
+
 
 
