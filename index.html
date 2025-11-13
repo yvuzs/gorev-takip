@@ -126,12 +126,13 @@
                     </div>
                     <div id="otherWrap" style="display:none">
                         <label>Puan (1–5) & Açıklama</label>
-                        <div class="score-picker" id="scorePicker">
-                            <div class="score-box" data-val="1" style="background:#fff7b2"></div>
-                            <div class="score-box" data-val="2" style="background:#ffe44d"></div>
-                            <div class="score-box" data-val="3" style="background:#ffd32d"></div>
-                            <div class="score-box" data-val="4" style="background:#ffa64d"></div>
-                            <div class="score-box" data-val="5" style="background:#e82929"></div>
+                        <div class="score-picker" id="pointButtons">
+                            <span data-pt="0" class="pt" style="background:#eee"></span>
+    <span data-pt="1" class="pt" style="background:#fff7b3"></span>
+    <span data-pt="2" class="pt" style="background:#ecd670"></span>
+    <span data-pt="3" class="pt" style="background:#d5aa3a"></span>
+    <span data-pt="4" class="pt" style="background:#cf7b3c"></span>
+    <span data-pt="5" class="pt" style="background:#c53b36"></span>
                         </div>
                         <span class="score-label" id="scoreLabel">Seçili: 1</span>
                         <input id="pointsInput" type="hidden" value="1" />
@@ -385,7 +386,7 @@
     const t = (r.type || '').toUpperCase();
     return t === (OTHER_TYPE||'').toUpperCase() || t === 'DİĞER' || t === 'DIGER';
   };
-  const w = r => (typeof weightOfRecord === 'function' ? weightOfRecord(r) : (Number(r.points)||1));
+  const w = r => (typeof weightOfRecord === 'function' ? weightOfRecord(r) : (Number(r.points)||0));
 
   // 1) TOPLAM DİĞER PUANINA göre personel sütun sırası
   const totals = new Map(state.people.map(p => [p, 0]));
@@ -617,7 +618,7 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
                     const chosen = (selTop && selTop.value || '').trim();
                     if(!chosen) return alert('DİĞER alt kategorisini seçin veya ekleyin.');
                     rec.digerTask = chosen;
-                    rec.points = Math.max(1, Math.min(5, Number($('#pointsInput').value||'1')));
+                    rec.points = Math.max(1, Math.min(5, Number($('#pointsInput').value||'0')));
                     rec.note = ($('#noteInput').value||'').trim();
                     // round-robin izini görev bazında tut
                     state.lastByOtherTask[chosen] = person;
@@ -731,6 +732,7 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
         </script>
     </body>
 </html>
+
 
 
 
