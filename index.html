@@ -127,15 +127,14 @@
                     <div id="otherWrap" style="display:none">
                         <label>Puan (1–5) & Açıklama</label>
                         <div class="score-picker" id="scorePicker">
-                             <div class="score-box" data-val="0" style="background:#cfd8e3"></div>
                             <div class="score-box" data-val="1" style="background:#fff7b2"></div>
                             <div class="score-box" data-val="2" style="background:#ffe44d"></div>
                             <div class="score-box" data-val="3" style="background:#ffd32d"></div>
                             <div class="score-box" data-val="4" style="background:#ffa64d"></div>
                             <div class="score-box" data-val="5" style="background:#e82929"></div>
                         </div>
-                        <span class="score-label" id="scoreLabel">Seçili: 0</span>
-                        <input id="pointsInput" type="hidden" value="0" />
+                        <span class="score-label" id="scoreLabel">Seçili: 1</span>
+                        <input id="pointsInput" type="hidden" value="1" />
                         <div class="row" style="margin-top:8px">
                             <input id="noteInput" type="text" placeholder="Açıklama (opsiyonel)" />
                         </div>
@@ -148,19 +147,19 @@
                     </div>
                     <div class="row">
                         <button class="btn btn-good" id="btnSuggest">Sıradaki Öner</button>
-                        <button class="btn btn-prim" id="">Kaydı Ekle</button>
+                        <button class="btn btn-prim" id="btnAdd">Kaydı Ekle</button>
                     </div>
                     <details>
                         <summary>Personel ve Tür Listeleri</summary>
-                        <div class="row"><input id="newPerson" type="text" placeholder="Yeni personel adı" /><button class="btn" id="Person">Ekle</button></div>
+                        <div class="row"><input id="newPerson" type="text" placeholder="Yeni personel adı" /><button class="btn" id="btnAddPerson">Ekle</button></div>
                         <div class="stack" id="peopleChips"></div>
                         <label>Görev Türleri</label>
                         <div class="stack" id="typeChips"></div>
-                        <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="Type">Ekle</button></div>
+                        <div class="row"><input id="newType" type="text" placeholder="Yeni tür (ör. GAMER)" /><button class="btn" id="btnAddType">Ekle</button></div>
                         <summary style="margin-top:20px">DİĞER – görev ve personel listelerini düzenle</summary>
                         <label>DİĞER Görevleri</label>
                         <div class="stack" id="digerTaskChips"></div>
-                        <div class="row"><input id="digerTaskNew2" type="text" placeholder="Yeni DİĞER görevi"><button class="btn" id="DigerTask2">Ekle</button></div>
+                        <div class="row"><input id="digerTaskNew2" type="text" placeholder="Yeni DİĞER görevi"><button class="btn" id="btnAddDigerTask2">Ekle</button></div>
                         <label style="margin-top:10px">Personel (kısa yol)</label>
                         <div class="stack" id="peopleChips2"></div>
                     </details>
@@ -454,24 +453,7 @@
     wChip.appendChild(del);
     dc.appendChild(wChip);
   });
- // Mevcut seçimi hatırla
-const selEl = document.getElementById('digerTaskSelectTop');
-const prevValue = selEl ? selEl.value : '';
-
-// Seçenekleri yeniden yaz
-document.getElementById('digerTaskSelectTop').innerHTML =
-  state.digerTasks.map(t => `<option>${t}</option>`).join('');
-
-// Eski seçimi geri yükle (varsa), yoksa ilkini seç
-const selTop = document.getElementById('digerTaskSelectTop');
-if (prevValue && state.digerTasks.includes(prevValue)) {
-  selTop.value = prevValue;
-} else if (state.digerTasks.length && !selTop.value) {
-  selTop.value = state.digerTasks[0];
-}
-// (İsteğe bağlı) öneriyi güncelle
-// document.getElementById('btnSuggest').click();
-
+  $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
   const pc2 = $('#peopleChips2'); pc2.innerHTML='';
   state.people.forEach(p=>{
     const wChip = document.createElement('span');
@@ -533,7 +515,7 @@ if (prevValue && state.digerTasks.includes(prevValue)) {
 
             // events
             $('#taskType').onchange = ()=>{ toggleOtherInputs(); $('#btnSuggest').click(); };
-            $('#digerTaskSelectTop').addEventListener('change', ()=>{ $('#btnSuggest').click(); });
+            $('#digerTaskSelectTop').addEventListener('change', ()=>{ $('#btnSuggest').click(); renderDiger(); });
 
             $('#btnSuggest').onclick = ()=>{
                 const t = $('#taskType').value;
@@ -565,31 +547,6 @@ if (prevValue && state.digerTasks.includes(prevValue)) {
                 }
 
                 state.records.push(rec);
-
-                // ---- EKLEME SONRASINDA HANGİ SEKME AÇIK KALSIN? ----
-// Mevcut görünümü oku (v17'de UI durumu localStorage'ta tutuluyor)
-let curView = 'summary';
-try {
-  const ui = JSON.parse(localStorage.getItem(LS_KEY + '__ui') || '{}');
-  if (ui && ui.view) curView = ui.view;
-} catch {}
-
-// "Diğer" ise aynı sekmede kal; diğer türlerde Özet'e geç
-const t = (type || '').toUpperCase();
-const isOtherNow = (t === (OTHER_TYPE || '').toUpperCase()) || t === 'DİĞER' || t === 'DIGER';
-
-if (isOtherNow) {
-  if (typeof setView === 'function') setView(curView);  // görünüm değiştirme!
-} else {
-  if (typeof setView === 'function') setView('summary'); // diğer türlerde özet
-}
-
-
-                // Kaydı ekledikten sonra tarih alanlarını sıfırla
-                const todayStr = new Date().toISOString().slice(0,10);
-                document.getElementById('startDate').value = todayStr;
-                document.getElementById('endDate').value = '';
-                
                 bumpMeta(); save(); renderAll(); schedulePush();
             };
 
@@ -694,7 +651,4 @@ if (isOtherNow) {
         </script>
     </body>
 </html>
-
-
-
 
