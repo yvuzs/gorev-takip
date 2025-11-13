@@ -453,7 +453,20 @@
     wChip.appendChild(del);
     dc.appendChild(wChip);
   });
-  $('#digerTaskSelectTop').innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+  // önceki seçimi hatırla
+const selBefore = ($('#digerTaskSelectTop') ? $('#digerTaskSelectTop').value : '') || '';
+
+// options'ları yeniden yaz
+const selEl = $('#digerTaskSelectTop');
+selEl.innerHTML = state.digerTasks.map(t=>`<option>${t}</option>`).join('');
+
+// mümkünse eski seçimi geri yükle; yoksa ilkini seç
+if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
+  selEl.value = selBefore;
+} else if (state.digerTasks.length) {
+  selEl.value = state.digerTasks[0];
+}
+
   const pc2 = $('#peopleChips2'); pc2.innerHTML='';
   state.people.forEach(p=>{
     const wChip = document.createElement('span');
@@ -651,4 +664,5 @@
         </script>
     </body>
 </html>
+
 
