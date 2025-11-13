@@ -618,7 +618,7 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
                     const chosen = (selTop && selTop.value || '').trim();
                     if(!chosen) return alert('DİĞER alt kategorisini seçin veya ekleyin.');
                     rec.digerTask = chosen;
-                    rec.points = Math.max(1, Math.min(5, Number($('#pointsInput').value||'0')));
+                    rec.points = Math.max(0, Math.min(5, Number($('#pointsInput').value||'0')));
                     rec.note = ($('#noteInput').value||'').trim();
                     // round-robin izini görev bazında tut
                     state.lastByOtherTask[chosen] = person;
@@ -732,6 +732,7 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
         </script>
     </body>
 </html>
+
 
 
 
