@@ -176,6 +176,39 @@
                         <input type="file" id="fileImport" accept="application/json" style="display:none" />
                     </div>
                     <div class="right"><button class="btn btn-danger" id="btnReset">Tüm Veriyi Sıfırla</button></div>
+                    <div class="collapsible" style="margin-top:16px">
+  <div class="collapsible-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+    Toplu Görev Ekle
+  </div>
+  <div class="collapsible-body" style="display:none; padding:8px 0">
+    <div class="row">
+      <label>Kişi</label>
+      <select id="bulkPerson"></select>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>Başlangıç Tarihi (tümü için)</label>
+      <input id="bulkStart" type="date" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>Bitiş Tarihi (opsiyonel)</label>
+      <input id="bulkEnd" type="date" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>Puan (her görev için sabit)</label>
+      <input id="bulkPoints" type="number" min="0" max="5" value="0" />
+    </div>
+    <div class="row" style="margin-top:6px">
+      <label>Görev Kodları (her satıra bir tane)</label>
+      <textarea id="bulkText" rows="8" style="width:100%;resize:vertical;font-family:monospace"></textarea>
+      <small style="opacity:.8">
+        Örnek: <code>MTSK</code>, <code>MAC</code>, <code>GOCMEN</code>, <code>SINAV</code>, <code>TEDBIR</code>, <code>112</code>...
+      </small>
+    </div>
+    <div class="row" style="margin-top:10px;text-align:right">
+      <button class="btn btn-prim" type="button" id="btnBulkAdd">Toplu Ekle</button>
+    </div>
+  </div>
+</div>
                 </div>
                 <div class="card">
                     <div class="row between" style="align-items:center;margin-bottom:8px">
@@ -728,10 +761,105 @@ if (selBefore && Array.from(selEl.options).some(o => o.value === selBefore)) {
                     } catch(e){ console.warn('SW kayıt hatası:', e); }
                 });
             }
+
+// --- Toplu görev ekleme (satır satır kod listesi) ---
+(function initBulkImport(){
+  const bulkPerson = $('#bulkPerson');
+  const bulkStart  = $('#bulkStart');
+  const bulkEnd    = $('#bulkEnd');
+  const bulkPoints = $('#bulkPoints');
+  const bulkText   = $('#bulkText');
+  const bulkBtn    = $('#btnBulkAdd');
+
+  if(!bulkPerson || !bulkText || !bulkBtn) return; // HTML yoksa çık
+
+  // Kişi listesini doldurmak için yardımcı
+  function refreshBulkPerson(){
+    bulkPerson.innerHTML = state.people.map(p=>`<option>${p}</option>`).join('');
+  }
+
+  // renderAll() bittikten sonra kişi listesi güncellensin
+  const oldRenderAll = renderAll;
+  renderAll = function(){
+    oldRenderAll();
+    refreshBulkPerson();
+  };
+  // ilk yüklemede de doldur
+  refreshBulkPerson();
+
+  // Kod -> Tür eşleme
+  const TYPE_MAP = {
+    '112': '112-HABER MERKEZI',
+    '112-HABER MERKEZI': '112-HABER MERKEZI',
+    'MAC': 'MAC',
+    'GOCMEN': 'GOCMEN',
+    'GÖÇMEN': 'GOCMEN',
+    'GAMER': 'GAMER'
+    // istersen buraya başka ana türler de ekleyebilirsin
+  };
+
+  bulkBtn.addEventListener('click', ()=>{
+    const person = (bulkPerson.value || '').trim();
+    if(!person){ alert('Kişi seçin.'); return; }
+
+    const raw = (bulkText.value || '').trim();
+    if(!raw){ alert('Görev kodlarını satır satır girin.'); return; }
+
+    const start = bulkStart.value || today();
+    const end   = bulkEnd.value   || start;
+    const pts   = Math.max(0, Math.min(5, Number(bulkPoints.value||'0')));
+
+    const lines = raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    if(!lines.length){ alert('Boş satırlar dışında veri yok.'); return; }
+
+    if(!confirm(`${person} için ${lines.length} görev eklensin mi?`)) return;
+
+    let added = 0;
+
+    lines.forEach(code=>{
+      const key = code.toUpperCase();
+      const rec = {
+        start,
+        end,
+        person,
+        note: '',
+        points: pts
+      };
+
+      // ana tür mü, DİĞER alt görevi mi?
+      if(TYPE_MAP[key]){
+        // Ör: MAC, GOCMEN, 112...
+        rec.type = TYPE_MAP[key];
+      }else{
+        // DİĞER + alt görev
+        rec.type = OTHER_TYPE;
+        rec.digerTask = key;
+
+        // alt görev listesinde yoksa ekle
+        if(!state.digerTasks.includes(key)){
+          state.digerTasks.push(key);
+        }
+      }
+
+      state.records.push(rec);
+      added++;
+    });
+
+    state.__meta = { updatedAt: Date.now(), clientId: (state.__meta && state.__meta.clientId) || '' };
+    save();
+    renderAll();
+    if(typeof schedulePush === 'function') schedulePush();
+
+    alert(`${added} kayıt eklendi.`);
+  });
+})();
+
+            
         })();
         </script>
     </body>
 </html>
+
 
 
 
